@@ -37,10 +37,11 @@ public class UsersManagement extends JFrame {
         titleLabel.setBorder(BorderFactory.createEmptyBorder(10, 0, 20, 0));
         mainPanel.add(titleLabel, BorderLayout.NORTH);
 
-        JPanel formPanel = new JPanel();
-        formPanel.setLayout(new BoxLayout(formPanel, BoxLayout.Y_AXIS));
-        formPanel.setOpaque(false);
-        formPanel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        // Panel contenedor principal para el formulario
+        JPanel formContainer = new JPanel();
+        formContainer.setLayout(new BoxLayout(formContainer, BoxLayout.Y_AXIS));
+        formContainer.setOpaque(false);
+        formContainer.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         JLabel backLabel = new JLabel("← Volver al menú anterior", SwingConstants.CENTER);
         backLabel.setFont(new Font("Yu Gothic Medium", Font.PLAIN, 14));
@@ -56,50 +57,111 @@ public class UsersManagement extends JFrame {
             }
         });
         
-        Dimension fieldSize = new Dimension(300, 44);
+        Dimension fieldSize = new Dimension(300, 40);
 
+        // Email Field with Label
+        JPanel emailPanel = new JPanel();
+        emailPanel.setLayout(new BoxLayout(emailPanel, BoxLayout.Y_AXIS));
+        emailPanel.setOpaque(false);
+        emailPanel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        emailPanel.setMaximumSize(new Dimension(fieldSize.width, Short.MAX_VALUE));
+        
+        JLabel emailLabel = new JLabel("Correo electrónico:");
+        emailLabel.setFont(new Font("Yu Gothic Medium", Font.BOLD, 14));
+        emailLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        emailLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 5, 0));
+        emailPanel.add(emailLabel);
+        
         JTextField emailField = new JTextField();
         emailField.setToolTipText("Ingrese un correo electrónico válido");
-        emailField.putClientProperty("JTextField.placeholderText", "Correo electrónico");
+        emailField.putClientProperty("JTextField.placeholderText", "Ingrese el correo electrónico");
         emailField.setFont(new Font("Yu Gothic Medium", Font.PLAIN, 14));
         emailField.setMaximumSize(fieldSize);
-        formPanel.add(emailField);
-        formPanel.add(Box.createVerticalStrut(10));
+        emailField.setAlignmentX(Component.LEFT_ALIGNMENT);
+        emailPanel.add(emailField);
+        formContainer.add(emailPanel);
+        formContainer.add(Box.createVerticalStrut(10));
 
+        // Username Field with Label
+        JPanel usernamePanel = new JPanel();
+        usernamePanel.setLayout(new BoxLayout(usernamePanel, BoxLayout.Y_AXIS));
+        usernamePanel.setOpaque(false);
+        usernamePanel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        usernamePanel.setMaximumSize(new Dimension(fieldSize.width, Short.MAX_VALUE));
+        
+        JLabel usernameLabel = new JLabel("Nombre de usuario:");
+        usernameLabel.setFont(new Font("Yu Gothic Medium", Font.BOLD, 14));
+        usernameLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        usernameLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 5, 0));
+        usernamePanel.add(usernameLabel);
+        
         JTextField usernameField = new JTextField();
         usernameField.setToolTipText("Ingrese el nombre de usuario");
-        usernameField.putClientProperty("JTextField.placeholderText", "Nombre de usuario");
+        usernameField.putClientProperty("JTextField.placeholderText", "Ingrese el nombre de usuario");
         usernameField.setFont(new Font("Yu Gothic Medium", Font.PLAIN, 14));
         usernameField.setMaximumSize(fieldSize);
-        formPanel.add(usernameField);
-        formPanel.add(Box.createVerticalStrut(10));
+        usernameField.setAlignmentX(Component.LEFT_ALIGNMENT);
+        usernamePanel.add(usernameField);
+        formContainer.add(usernamePanel);
+        formContainer.add(Box.createVerticalStrut(10));
 
+        // Password Field with Label
+        JPanel passwordPanel = new JPanel();
+        passwordPanel.setLayout(new BoxLayout(passwordPanel, BoxLayout.Y_AXIS));
+        passwordPanel.setOpaque(false);
+        passwordPanel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        passwordPanel.setMaximumSize(new Dimension(fieldSize.width, Short.MAX_VALUE));
+        
+        JLabel passwordLabel = new JLabel("Contraseña:");
+        passwordLabel.setFont(new Font("Yu Gothic Medium", Font.BOLD, 14));
+        passwordLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        passwordLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 5, 0));
+        passwordPanel.add(passwordLabel);
+        
         JPasswordField passwordField = new JPasswordField();
         passwordField.setToolTipText("Ingrese una contraseña segura");
-        passwordField.putClientProperty("JTextField.placeholderText", "Contraseña");
+        passwordField.putClientProperty("JTextField.placeholderText", "Ingrese la contraseña");
         passwordField.setFont(new Font("Yu Gothic Medium", Font.PLAIN, 14));
         passwordField.setMaximumSize(fieldSize);
-        formPanel.add(passwordField);
-        formPanel.add(Box.createVerticalStrut(10));
+        passwordField.setAlignmentX(Component.LEFT_ALIGNMENT);
+        passwordPanel.add(passwordField);
+        formContainer.add(passwordPanel);
+        formContainer.add(Box.createVerticalStrut(10));
 
+        // Role ComboBox with Label
+        JPanel rolePanel = new JPanel();
+        rolePanel.setLayout(new BoxLayout(rolePanel, BoxLayout.Y_AXIS));
+        rolePanel.setOpaque(false);
+        rolePanel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        rolePanel.setMaximumSize(new Dimension(fieldSize.width, Short.MAX_VALUE));
+        
+        JLabel roleLabel = new JLabel("Rol del usuario:");
+        roleLabel.setFont(new Font("Yu Gothic Medium", Font.BOLD, 14));
+        roleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        roleLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 5, 0));
+        rolePanel.add(roleLabel);
+        
         JComboBox<String> roleComboBox = new JComboBox<>(new String[] {
             "Seleccionar rol", "Administrador", "Cocinero", "Mesero"
         });
         roleComboBox.setToolTipText("Seleccione un rol para el nuevo usuario");
         roleComboBox.setFont(new Font("Yu Gothic Medium", Font.PLAIN, 14));
         roleComboBox.setMaximumSize(fieldSize);
-        formPanel.add(roleComboBox);
-        formPanel.add(Box.createVerticalStrut(10));
-        formPanel.add(backLabel);
-        formPanel.add(Box.createVerticalStrut(20));
+        roleComboBox.setAlignmentX(Component.LEFT_ALIGNMENT);
+        rolePanel.add(roleComboBox);
+        formContainer.add(rolePanel);
+        formContainer.add(Box.createVerticalStrut(10));
+        formContainer.add(backLabel);
+        formContainer.add(Box.createVerticalStrut(20));
 
+        // Create User Button
         JButton createUserButton = new JButton("Crear Usuario");
         createUserButton.setBackground(new Color(255, 140, 0));
         createUserButton.setForeground(Color.WHITE);
         createUserButton.setFont(new Font("Yu Gothic Medium", Font.BOLD, 14));
         createUserButton.setFocusPainted(false);
         createUserButton.setAlignmentX(Component.CENTER_ALIGNMENT);
-        createUserButton.setPreferredSize(new Dimension(520, 140));
+        createUserButton.setMaximumSize(fieldSize);
 
         createUserButton.addMouseListener(new MouseAdapter() {
             Color originalColor = createUserButton.getBackground();
@@ -108,7 +170,7 @@ public class UsersManagement extends JFrame {
             @Override
             public void mouseEntered(MouseEvent e) {
                 createUserButton.setBackground(new Color(0, 128, 0));
-                createUserButton.setFont(originalFont.deriveFont(18f));
+                createUserButton.setFont(originalFont.deriveFont(16f));
             }
 
             @Override
@@ -138,26 +200,18 @@ public class UsersManagement extends JFrame {
             }
         });
 
-        formPanel.add(createUserButton);
+        formContainer.add(createUserButton);
 
-        mainPanel.add(formPanel, BorderLayout.CENTER);
+        mainPanel.add(formContainer, BorderLayout.CENTER);
 
         JPanel bottomPanel = new JPanel(new BorderLayout());
         bottomPanel.setOpaque(false);
 
-        JLabel welcomeLabel = new JLabel("Bienvenido al panel de administración.", SwingConstants.CENTER);
-        welcomeLabel.setFont(new Font("Yu Gothic Medium", Font.BOLD, 25));
-        welcomeLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 10, 0));
-
         JLabel copyrightLabel = new JLabel("© 2025 Sushi Burrito. Todos los derechos reservados.", SwingConstants.CENTER);
         copyrightLabel.setFont(new Font("Yu Gothic Medium", Font.PLAIN, 12));
 
-        bottomPanel.add(welcomeLabel, BorderLayout.CENTER);
         bottomPanel.add(copyrightLabel, BorderLayout.SOUTH);
 
         mainPanel.add(bottomPanel, BorderLayout.SOUTH);
     }
 }
-
-
-

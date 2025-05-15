@@ -142,11 +142,7 @@ public class AdminPanelView extends JFrame {
                 optionPanel.addMouseListener(new PanelMouseAdapter(titleLabel, optionPanel) {
                     @Override
                     public void mouseClicked(MouseEvent e) {
-                        // Aquí iría la lógica para abrir Gestión Carta
-                        JOptionPane.showMessageDialog(AdminPanelView.this, 
-                            "Gestión Carta seleccionada", 
-                            "Aviso", 
-                            JOptionPane.INFORMATION_MESSAGE);
+                    	abrirGestionMenu();
                     }
                 });
             } else { // Estadísticas
@@ -195,6 +191,23 @@ public class AdminPanelView extends JFrame {
                 e.printStackTrace();
                 JOptionPane.showMessageDialog(this, 
                     "Error al abrir la gestión de usuarios: " + e.getMessage(), 
+                    "Error", 
+                    JOptionPane.ERROR_MESSAGE);
+            }
+        });
+    }
+    
+    private void abrirGestionMenu() {
+        EventQueue.invokeLater(() -> {
+            try {
+            	MenuManagement menuManagement = new MenuManagement();
+            	menuManagement.setVisible(true);
+            	menuManagement.setLocationRelativeTo(null);
+                this.dispose(); // Cierra el panel actual
+            } catch (Exception e) {
+                e.printStackTrace();
+                JOptionPane.showMessageDialog(this, 
+                    "Error al abrir la gestión del menú: " + e.getMessage(), 
                     "Error", 
                     JOptionPane.ERROR_MESSAGE);
             }
