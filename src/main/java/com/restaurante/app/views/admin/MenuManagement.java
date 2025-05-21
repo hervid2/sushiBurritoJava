@@ -146,7 +146,7 @@ public class MenuManagement extends JFrame {
         Color originalColor = button.getBackground();
         button.addMouseListener(new MouseAdapter() {
             public void mouseEntered(MouseEvent e) {
-                button.setBackground(Color.ORANGE);
+                button.setBackground(new Color(255, 140, 0));
             }
 
             public void mouseExited(MouseEvent e) {
@@ -154,7 +154,7 @@ public class MenuManagement extends JFrame {
             }
 
             public void mousePressed(MouseEvent e) {
-                button.setBackground(Color.ORANGE.darker());
+                button.setBackground(new Color(255, 140, 0));
             }
         });
     }

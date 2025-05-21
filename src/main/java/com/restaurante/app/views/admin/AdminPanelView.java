@@ -71,6 +71,23 @@ public class AdminPanelView extends JFrame {
         
         topPanel.add(logoutButton);
         mainPanel.add(topPanel, BorderLayout.NORTH);
+        
+        	// Efecto hover para el botón de cerrar sesión
+            logoutButton.addMouseListener(new MouseAdapter() {
+            	 @Override
+                public void mouseEntered(MouseEvent e) {
+                	logoutButton.setBackground(new Color(0, 128, 0));
+                }
+            	 @Override
+                public void mouseExited(MouseEvent e) {
+                	logoutButton.setBackground(new Color(255, 140, 0));
+                }
+            	 @Override
+                public void mousePressed(MouseEvent e) {
+                	logoutButton.setBackground(new Color(0, 128, 0));
+                }
+            });
+        
 
         // Panel de botones de gestión con imágenes
         JPanel buttonPanel = new JPanel(new GridLayout(1, 3, 20, 0));
@@ -149,11 +166,7 @@ public class AdminPanelView extends JFrame {
                 optionPanel.addMouseListener(new PanelMouseAdapter(titleLabel, optionPanel) {
                     @Override
                     public void mouseClicked(MouseEvent e) {
-                        // Aquí iría la lógica para abrir Estadísticas
-                        JOptionPane.showMessageDialog(AdminPanelView.this, 
-                            "Estadísticas seleccionadas", 
-                            "Aviso", 
-                            JOptionPane.INFORMATION_MESSAGE);
+                    	abrirEstadisticas();
                     }
                 });
             }
@@ -180,7 +193,26 @@ public class AdminPanelView extends JFrame {
         mainPanel.add(bottomPanel, BorderLayout.SOUTH);
     }
     
-    private void abrirGestionUsuarios() {
+    // Método para generar la interfaz "Estadísticas"
+    protected void abrirEstadisticas() {
+    	EventQueue.invokeLater(() -> {
+            try {
+            	SalesStatisticsView salesStatisticsView = new SalesStatisticsView();
+            	salesStatisticsView.setVisible(true);
+            	salesStatisticsView.setLocationRelativeTo(null);
+                this.dispose(); // Cierra el panel actual
+            } catch (Exception e) {
+                e.printStackTrace();
+                JOptionPane.showMessageDialog(this, 
+                    "Error al abrir el panel de estadísticas: " + e.getMessage(), 
+                    "Error", 
+                    JOptionPane.ERROR_MESSAGE);
+            }
+        });
+	}
+    
+    // Método para generar la interfaz "Gestión de Usuarios"
+	private void abrirGestionUsuarios() {
         EventQueue.invokeLater(() -> {
             try {
                 UsersManagement usersManagement = new UsersManagement();
@@ -190,13 +222,14 @@ public class AdminPanelView extends JFrame {
             } catch (Exception e) {
                 e.printStackTrace();
                 JOptionPane.showMessageDialog(this, 
-                    "Error al abrir la gestión de usuarios: " + e.getMessage(), 
+                    "Error al abrir el panel gestión de usuarios: " + e.getMessage(), 
                     "Error", 
                     JOptionPane.ERROR_MESSAGE);
             }
         });
     }
     
+	// Método para generar la interfaz "Gestión del menú"
     private void abrirGestionMenu() {
         EventQueue.invokeLater(() -> {
             try {
@@ -207,7 +240,7 @@ public class AdminPanelView extends JFrame {
             } catch (Exception e) {
                 e.printStackTrace();
                 JOptionPane.showMessageDialog(this, 
-                    "Error al abrir la gestión del menú: " + e.getMessage(), 
+                    "Error al abrir el panel gestión del menú: " + e.getMessage(), 
                     "Error", 
                     JOptionPane.ERROR_MESSAGE);
             }
