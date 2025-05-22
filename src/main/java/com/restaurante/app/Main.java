@@ -5,7 +5,9 @@ import main.java.com.restaurante.app.views.admin.SalesStatisticsView;
 import main.java.com.restaurante.app.views.admin.UsersManagement;
 import main.java.com.restaurante.app.views.authentication.LoginView;
 import main.java.com.restaurante.app.views.authentication.SetNewPasswordView;
-import main.java.com.restaurante.app.views.cocina.WaiterPanelView;
+import main.java.com.restaurante.app.views.mesero.GenerarComandaView;
+import main.java.com.restaurante.app.views.mesero.GenerarFacturaView;
+import main.java.com.restaurante.app.views.mesero.WaiterPanelView;
 
 /**
  * Launch the application.
@@ -38,6 +40,7 @@ public class Main {
          WaiterPanelView waiterPanelView = new WaiterPanelView();
          waiterPanelView.setVisible(true);
          
+        
 
 	}
 

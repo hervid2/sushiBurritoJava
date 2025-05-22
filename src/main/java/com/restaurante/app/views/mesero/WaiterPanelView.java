@@ -1,4 +1,4 @@
-package main.java.com.restaurante.app.views.cocina;
+package main.java.com.restaurante.app.views.mesero;
 
 import com.formdev.flatlaf.FlatLightLaf;
 import javax.swing.*;
@@ -13,11 +13,11 @@ public class WaiterPanelView extends JFrame {
 
     // Image paths for the buttons
     private static final String[] IMAGE_PATHS = {
-            "/main/resources/images/ui/GestionUsuarios.jpeg",
-            "/main/resources/images/ui/GestionUsuarios.jpeg",
-            "/main/resources/images/ui/GestionUsuarios.jpeg",
-            "/main/resources/images/ui/GestionUsuarios.jpeg",
-            "/main/resources/images/ui/GestionUsuarios.jpeg"
+            "/main/resources/images/ui/orden.png",
+            "/main/resources/images/ui/GenerarFactura.png",
+            "/main/resources/images/ui/EditarPedido.png",
+            "/main/resources/images/ui/CerrarPedido.png",
+            "/main/resources/images/ui/CancelarPedido.png"
     };
 
     public WaiterPanelView() {
@@ -216,16 +216,16 @@ public class WaiterPanelView extends JFrame {
     // Method to handle "Generar Comanda"
     private void generateOrder() {
         EventQueue.invokeLater(() -> {
-            JOptionPane.showMessageDialog(this, "Funcionalidad: Generar Comanda (Próximamente)", "Información", JOptionPane.INFORMATION_MESSAGE);
-            // TODO: Implement the logic to generate an order (e.g., open a new JFrame for order creation)
+        	this.dispose(); // Cierra la ventana actual
+            new GenerarComandaView().setVisible(true); 
         });
     }
 
     // Method to handle "Generar Factura"
     private void generateInvoice() {
-        EventQueue.invokeLater(() -> {
-            JOptionPane.showMessageDialog(this, "Funcionalidad: Generar Factura (Próximamente)", "Información", JOptionPane.INFORMATION_MESSAGE);
-            // TODO: Implement the logic to generate an invoice
+        EventQueue.invokeLater(() -> { 
+        	this.dispose(); 
+        	new GenerarFacturaView().setVisible(true); 
         });
     }
 
@@ -300,6 +300,6 @@ public class WaiterPanelView extends JFrame {
             timer.start();
         }
     }
-
+}
    
-    }
+
