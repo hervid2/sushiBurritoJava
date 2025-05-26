@@ -12,8 +12,8 @@ public class AdminPanelView extends JFrame {
     
     // Ruta de las imágenes
     private static final String[] IMAGE_PATHS = {
-        "/main/resources/images/ui/GestionUsuarios.jpeg",
-        "/main/resources/images/ui/GestionCarta.jpg",
+        "/main/resources/images/ui/GestionUsuarios.png",
+        "/main/resources/images/ui/GestionCarta.png",
         "/main/resources/images/ui/Estadisticas.png"
     };
     

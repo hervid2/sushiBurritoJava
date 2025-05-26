@@ -11,8 +11,9 @@ import java.awt.event.*;
 public class MenuManagement extends JFrame {
 
     private JTable table;
-    private JLabel netTotalLabel, saleTotalLabel, taxTotalLabel;
     private JTextField searchField;
+    
+    private String[] categorias = {"Infantil", "Bebidas", "Postres", "Entradas", "Platos Fuertes", "Acompañamientos"};
 
     public MenuManagement() {
         setupUI();
@@ -34,7 +35,7 @@ public class MenuManagement extends JFrame {
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 
         JPanel mainPanel = new JPanel(new BorderLayout(20, 10));
-        mainPanel.setBackground(new Color(255, 250, 205));
+        mainPanel.setBackground(new Color(255, 250, 205)); // Un color crema suave
         mainPanel.setBorder(new EmptyBorder(20, 20, 20, 20));
         setContentPane(mainPanel);
 
@@ -50,26 +51,23 @@ public class MenuManagement extends JFrame {
         JPanel leftPanel = new JPanel(new BorderLayout(10, 10));
         leftPanel.setOpaque(false);
 
-        JPanel buttonPanel = new JPanel(new GridLayout(1, 5, 10, 10));
-        buttonPanel.setOpaque(false);
+        // Los botones "Agregar", "Editar", "Eliminar"
+        JPanel actionButtonPanel = new JPanel(new GridLayout(1, 3, 10, 10)); // 3 columnas para estos botones
+        actionButtonPanel.setOpaque(false);
 
         JButton addButton = createStyledButton("Agregar");
         JButton editButton = createStyledButton("Editar");
         JButton deleteButton = createStyledButton("Eliminar");
-        JButton clearButton = createStyledButton("Limpiar");
-        searchField = new JTextField();
-        searchField.setToolTipText("Buscar por nombre...");
+        
+        actionButtonPanel.add(addButton);
+        actionButtonPanel.add(editButton);
+        actionButtonPanel.add(deleteButton);
+        
+        leftPanel.add(actionButtonPanel, BorderLayout.NORTH); // Los botones de acción van al NORTE del leftPanel
 
-        buttonPanel.add(addButton);
-        buttonPanel.add(editButton);
-        buttonPanel.add(deleteButton);
-        buttonPanel.add(clearButton);
-        buttonPanel.add(searchField);
-
-        leftPanel.add(buttonPanel, BorderLayout.NORTH);
-
+        // Configuración de la tabla con la nueva columna "Categoría"
         table = new JTable();
-        String[] columns = {"Nombre", "Ingredientes", "Valor Neto", "IVA", "Valor Venta"};
+        String[] columns = {"Nombre", "Ingredientes", "Valor Neto", "IVA", "Valor Venta", "Categoría"}; // Agregada "Categoría"
         DefaultTableModel model = new DefaultTableModel(columns, 0);
         table.setModel(model);
         table.setRowHeight(28);
@@ -79,24 +77,24 @@ public class MenuManagement extends JFrame {
 
         centerPanel.add(leftPanel, BorderLayout.CENTER);
 
-        JPanel summaryPanel = new JPanel(new GridLayout(4, 1, 10, 10));
-        summaryPanel.setPreferredSize(new Dimension(250, 150));
-        summaryPanel.setOpaque(false);
+        // --- Panel para el campo de búsqueda y su label (anteriormente panel de resumen) ---
+        JPanel searchAndClearPanel = new JPanel();
+        searchAndClearPanel.setLayout(new FlowLayout(FlowLayout.RIGHT, 10, 10)); // Alineación a la derecha
+        searchAndClearPanel.setPreferredSize(new Dimension(250, 80)); // Ajusta el tamaño para dos componentes
+        searchAndClearPanel.setOpaque(false);
 
-        netTotalLabel = new JLabel("Total Neto: $0");
-        saleTotalLabel = new JLabel("Total Venta: $0");
-        taxTotalLabel = new JLabel("Total IVA: $0");
+        JLabel filterLabel = new JLabel("Filtrar por nombre:");
+        filterLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        searchAndClearPanel.add(filterLabel);
 
-        Font summaryFont = new Font("Segoe UI", Font.BOLD, 16);
-        netTotalLabel.setFont(summaryFont);
-        saleTotalLabel.setFont(summaryFont);
-        taxTotalLabel.setFont(summaryFont);
+        searchField = new JTextField(15); // Tamaño del campo de texto
+        searchField.setToolTipText("Buscar por nombre...");
+        searchAndClearPanel.add(searchField);
+        
+        JButton clearButton = createStyledButton("Limpiar"); // El botón limpiar se mueve aquí
+        searchAndClearPanel.add(clearButton);
 
-        summaryPanel.add(netTotalLabel);
-        summaryPanel.add(saleTotalLabel);
-        summaryPanel.add(taxTotalLabel);
-
-        centerPanel.add(summaryPanel, BorderLayout.EAST);
+        centerPanel.add(searchAndClearPanel, BorderLayout.EAST); // Agregado a la derecha
 
         JPanel footerPanel = new JPanel(new BorderLayout());
         footerPanel.setOpaque(false);
@@ -108,6 +106,7 @@ public class MenuManagement extends JFrame {
         backLabel.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
+                // Asumiendo que AdminPanelView está en el mismo paquete o accesible
                 AdminPanelView adminPanel = new AdminPanelView();
                 adminPanel.setVisible(true);
                 dispose();
@@ -122,11 +121,13 @@ public class MenuManagement extends JFrame {
 
         mainPanel.add(footerPanel, BorderLayout.SOUTH);
 
+        // Action Listeners para los botones
         addButton.addActionListener(e -> mostrarVentanaAgregarProducto());
         editButton.addActionListener(e -> mostrarVentanaEditarProducto());
         deleteButton.addActionListener(e -> mostrarConfirmacionEliminar());
-        clearButton.addActionListener(e -> searchField.setText(""));
+        clearButton.addActionListener(e -> searchField.setText("")); // Limpia el campo de búsqueda
 
+        // Efectos hover (aplicados a los botones de acción y al nuevo botón "Limpiar")
         agregarEfectoHover(addButton);
         agregarEfectoHover(editButton);
         agregarEfectoHover(deleteButton);
@@ -136,7 +137,7 @@ public class MenuManagement extends JFrame {
     private JButton createStyledButton(String text) {
         JButton button = new JButton(text);
         button.setFocusPainted(false);
-        button.setBackground(new Color(0, 128, 0));
+        button.setBackground(new Color(0, 128, 0)); // Verde oscuro
         button.setForeground(Color.WHITE);
         button.setFont(new Font("Segoe UI", Font.BOLD, 14));
         return button;
@@ -146,7 +147,7 @@ public class MenuManagement extends JFrame {
         Color originalColor = button.getBackground();
         button.addMouseListener(new MouseAdapter() {
             public void mouseEntered(MouseEvent e) {
-                button.setBackground(new Color(255, 140, 0));
+                button.setBackground(new Color(255, 140, 0)); // Naranja brillante
             }
 
             public void mouseExited(MouseEvent e) {
@@ -154,14 +155,16 @@ public class MenuManagement extends JFrame {
             }
 
             public void mousePressed(MouseEvent e) {
-                button.setBackground(new Color(255, 140, 0));
+                button.setBackground(new Color(200, 100, 0)); // Naranja más oscuro al presionar
             }
         });
     }
 
     private void mostrarVentanaEditarProducto() {
         JDialog editDialog = crearVentanaProducto("Editar Producto", true);
-        JButton save = (JButton) ((JPanel) editDialog.getContentPane().getComponent(0)).getComponent(10);
+        // El botón de guardar es el último componente en el panel del diálogo,
+        // ahora con 7 filas de datos y 2 botones, el índice es 14 (7*2 = 14, 0-indexed)
+        JButton save = (JButton) ((JPanel) editDialog.getContentPane().getComponent(0)).getComponent(12); 
         save.addActionListener(e -> {
             int confirm = JOptionPane.showConfirmDialog(this,
                     "¿Deseas guardar los cambios del producto?",
@@ -178,7 +181,9 @@ public class MenuManagement extends JFrame {
 
     private void mostrarVentanaAgregarProducto() {
         JDialog addDialog = crearVentanaProducto("Agregar Producto", false);
-        JButton save = (JButton) ((JPanel) addDialog.getContentPane().getComponent(0)).getComponent(10);
+        // El botón de guardar es el último componente en el panel del diálogo,
+        // ahora con 7 filas de datos y 2 botones, el índice es 14 (7*2 = 14, 0-indexed)
+        JButton save = (JButton) ((JPanel) addDialog.getContentPane().getComponent(0)).getComponent(12);
         save.addActionListener(e -> {
             int confirm = JOptionPane.showConfirmDialog(this,
                     "¿Deseas agregar este nuevo producto?",
@@ -193,42 +198,51 @@ public class MenuManagement extends JFrame {
         addDialog.setVisible(true);
     }
 
+    /**
+     * Crea una ventana de diálogo para agregar o editar un producto.
+     * @param titulo El título de la ventana de diálogo.
+     * @param esEdicion Booleano que indica si la ventana es para edición (true) o para agregar (false).
+     * @return El JDialog configurado.
+     */
     private JDialog crearVentanaProducto(String titulo, boolean esEdicion) {
         JDialog dialog = new JDialog(this, titulo, true);
-        dialog.setSize(500, 350);
+        dialog.setSize(500, 400); // Aumentado el tamaño para la nueva fila
         dialog.setLocationRelativeTo(this);
 
-        JPanel panel = new JPanel(new GridLayout(6, 2, 10, 10));
+        JPanel panel = new JPanel(new GridLayout(7, 2, 10, 10)); // Cambiado a 7 filas para la categoría
         panel.setBorder(new EmptyBorder(20, 20, 20, 20));
 
-        JTextField name = new JTextField(esEdicion ? "Nombre Producto" : "");
-        JTextField ingredients = new JTextField(esEdicion ? "Ingredientes" : "");
-        JTextField net = new JTextField(esEdicion ? "10000" : "");
-        JTextField tax = new JTextField(esEdicion ? "1900" : "");
-        JTextField sale = new JTextField(esEdicion ? "11900" : "");
+        JTextField nameField = new JTextField(esEdicion ? "Nombre Producto" : "");
+        JTextField ingredientsField = new JTextField(esEdicion ? "Ingredientes" : "");
+        JTextField netValueField = new JTextField(esEdicion ? "10000" : "");
+        JTextField taxValueField = new JTextField(esEdicion ? "1900" : "");
+        JTextField saleValueField = new JTextField(esEdicion ? "11900" : "");
+        JComboBox<String> categoryComboBox = new JComboBox<>(categorias);
 
         panel.add(new JLabel("Nombre:"));
-        panel.add(name);
+        panel.add(nameField);
         panel.add(new JLabel("Ingredientes:"));
-        panel.add(ingredients);
+        panel.add(ingredientsField);
         panel.add(new JLabel("Valor Neto:"));
-        panel.add(net);
+        panel.add(netValueField);
         panel.add(new JLabel("IVA ($):"));
-        panel.add(tax);
+        panel.add(taxValueField);
         panel.add(new JLabel("Valor Venta:"));
-        panel.add(sale);
+        panel.add(saleValueField);
+        panel.add(new JLabel("Categoría:")); // Nuevo label para la categoría
+        panel.add(categoryComboBox); // Nuevo ComboBox para la categoría
 
-        JButton save = new JButton(esEdicion ? "Guardar cambios" : "Agregar producto");
-        JButton cancel = new JButton("Cancelar");
-        panel.add(save);
-        panel.add(cancel);
+        JButton saveButton = new JButton(esEdicion ? "Guardar cambios" : "Agregar producto");
+        JButton cancelButton = new JButton("Cancelar");
+        panel.add(saveButton);
+        panel.add(cancelButton);
 
-        save.setBackground(new Color(0, 128, 0));
-        save.setForeground(Color.WHITE);
-        cancel.setBackground(Color.GRAY);
-        cancel.setForeground(Color.WHITE);
+        saveButton.setBackground(new Color(0, 128, 0));
+        saveButton.setForeground(Color.WHITE);
+        cancelButton.setBackground(Color.GRAY);
+        cancelButton.setForeground(Color.WHITE);
 
-        cancel.addActionListener(e -> dialog.dispose());
+        cancelButton.addActionListener(e -> dialog.dispose());
 
         dialog.add(panel);
         return dialog;
@@ -246,5 +260,3 @@ public class MenuManagement extends JFrame {
         }
     }
 }
-
-

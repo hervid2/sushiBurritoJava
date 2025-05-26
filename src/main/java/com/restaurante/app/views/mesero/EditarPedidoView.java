@@ -7,12 +7,12 @@ import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 
-public class GenerarComandaView extends JFrame {
+public class EditarPedidoView extends JFrame {
 
-    private JTable resumenTable;
+    private JTable tablaPedido;
     private DefaultTableModel tableModel;
 
-    public GenerarComandaView() {
+    public EditarPedidoView() {
         setupUI();
     }
 
@@ -26,7 +26,7 @@ public class GenerarComandaView extends JFrame {
             System.err.println("Error al configurar FlatLaf: " + ex.getMessage());
         }
 
-        setTitle("Generar Comanda - Sushi Burrito");
+        setTitle("Editar Pedido - Sushi Burrito");
         setSize(1000, 750);
         setLocationRelativeTo(null);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -36,7 +36,7 @@ public class GenerarComandaView extends JFrame {
         mainPanel.setBackground(new Color(255, 250, 205));
         setContentPane(mainPanel);
 
-        JLabel titleLabel = new JLabel("Generar Comanda", SwingConstants.CENTER);
+        JLabel titleLabel = new JLabel("Editar Pedido", SwingConstants.CENTER);
         titleLabel.setFont(new Font("Yu Gothic UI", Font.BOLD, 28));
         titleLabel.setBorder(new EmptyBorder(10, 0, 30, 0));
         mainPanel.add(titleLabel, BorderLayout.NORTH);
@@ -46,32 +46,32 @@ public class GenerarComandaView extends JFrame {
         centerPanel.setOpaque(false);
         mainPanel.add(centerPanel, BorderLayout.CENTER);
 
-        // Selector de mesa
-        JPanel mesaPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
-        mesaPanel.setOpaque(false);
-        JLabel lblMesa = new JLabel("Mesa:");
-        lblMesa.setFont(new Font("Segoe UI", Font.BOLD, 16));
-        JComboBox<String> comboMesa = new JComboBox<>();
-        for (int i = 1; i <= 20; i++) {
-            comboMesa.addItem(String.valueOf(i));
-        }
-        comboMesa.setFont(new Font("Segoe UI", Font.PLAIN, 16));
-        comboMesa.setPreferredSize(new Dimension(100, 30));
-        mesaPanel.add(lblMesa);
-        mesaPanel.add(comboMesa);
-        centerPanel.add(mesaPanel);
+        // Selector de pedido
+        JPanel selectorPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 10));
+        selectorPanel.setOpaque(false);
+        selectorPanel.setMaximumSize(new Dimension(900, 40));
+
+        JLabel lblPedido = new JLabel("Selecciona Pedido:");
+        lblPedido.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        JComboBox<String> comboPedidos = new JComboBox<>(new String[]{"Pedido #101", "Pedido #102", "Pedido #103"});
+        comboPedidos.setFont(new Font("Segoe UI", Font.PLAIN, 16));
+        comboPedidos.setPreferredSize(new Dimension(200, 30));
+
+        selectorPanel.add(lblPedido);
+        selectorPanel.add(comboPedidos);
+        centerPanel.add(selectorPanel);
         centerPanel.add(Box.createVerticalStrut(20));
 
-        // Tabla de resumen con nueva columna "Notas"
-        tableModel = new DefaultTableModel(new Object[]{"Producto", "Categoría", "Cantidad", "Notas"}, 0);
-        resumenTable = new JTable(tableModel);
-        JScrollPane scrollResumen = new JScrollPane(resumenTable);
-        scrollResumen.setPreferredSize(new Dimension(900, 200));
-        scrollResumen.setAlignmentX(Component.CENTER_ALIGNMENT);
-        centerPanel.add(scrollResumen);
+        // Tabla de productos del pedido
+        tableModel = new DefaultTableModel(new Object[]{"Producto", "Categoría", "Cantidad", "Notas", "Mesa"}, 0);
+        tablaPedido = new JTable(tableModel);
+        JScrollPane scrollTabla = new JScrollPane(tablaPedido);
+        scrollTabla.setPreferredSize(new Dimension(900, 200));
+        scrollTabla.setAlignmentX(Component.CENTER_ALIGNMENT);
+        centerPanel.add(scrollTabla);
         centerPanel.add(Box.createVerticalStrut(20));
 
-        // Panel de selección
+        // Panel de edición
         JPanel inputPanel = new JPanel(new GridLayout(4, 2, 15, 15));
         inputPanel.setOpaque(false);
         inputPanel.setMaximumSize(new Dimension(700, 150));
@@ -108,63 +108,61 @@ public class GenerarComandaView extends JFrame {
         centerPanel.add(inputPanel);
         centerPanel.add(Box.createVerticalStrut(20));
 
-        // Botones centrados
+        // Botones de acción
         JPanel botonesPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 10));
         botonesPanel.setOpaque(false);
 
-        JButton btnAgregar = new JButton("Agregar a la Comanda");
+        JButton btnAgregar = new JButton("Agregar Producto");
         btnAgregar.setBackground(new Color(255, 140, 0));
         btnAgregar.setForeground(Color.WHITE);
         btnAgregar.setFont(new Font("Segoe UI", Font.BOLD, 16));
         btnAgregar.setPreferredSize(new Dimension(200, 40));
 
-        JButton btnConfirmar = new JButton("Confirmar Comanda");
-        btnConfirmar.setBackground(new Color(0, 128, 0));
-        btnConfirmar.setForeground(Color.WHITE);
-        btnConfirmar.setFont(new Font("Segoe UI", Font.BOLD, 16));
-        btnConfirmar.setPreferredSize(new Dimension(200, 40));
+        JButton btnModificar = new JButton("Modificar Producto");
+        btnModificar.setBackground(new Color(0, 128, 0));
+        btnModificar.setForeground(Color.WHITE);
+        btnModificar.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        btnModificar.setPreferredSize(new Dimension(200, 40));
 
-        JButton btnEliminar = new JButton("Eliminar Selección");
+        JButton btnEliminar = new JButton("Eliminar Producto");
         btnEliminar.setBackground(new Color(255, 0, 0));
         btnEliminar.setForeground(Color.WHITE);
         btnEliminar.setFont(new Font("Segoe UI", Font.BOLD, 16));
         btnEliminar.setPreferredSize(new Dimension(200, 40));
 
         botonesPanel.add(btnAgregar);
-        botonesPanel.add(btnConfirmar);
+        botonesPanel.add(btnModificar);
         botonesPanel.add(btnEliminar);
         centerPanel.add(botonesPanel);
 
-        // Acción Agregar
+        // Acciones de botones
         btnAgregar.addActionListener(e -> {
             String producto = (String) comboProducto.getSelectedItem();
             String categoria = (String) comboCategoria.getSelectedItem();
             int cantidad = (Integer) spinnerCantidad.getValue();
             String notas = txtNotas.getText();
-            String mesa = (String) comboMesa.getSelectedItem();
-
-            tableModel.addRow(new Object[]{mesa + " - " + producto, categoria, cantidad, notas});
-            txtNotas.setText(""); 
+            // Sin selector de mesa, se puede setear vacío o valor por defecto
+            String mesa = "";
+            tableModel.addRow(new Object[]{producto, categoria, cantidad, notas, mesa});
+            txtNotas.setText("");
         });
 
-        // Acción Confirmar
-        btnConfirmar.addActionListener(e -> {
-            int confirm = JOptionPane.showConfirmDialog(
-                    this,
-                    "¿Estás seguro de que deseas generar esta comanda?",
-                    "Confirmación",
-                    JOptionPane.YES_NO_OPTION
-            );
-
-            if (confirm == JOptionPane.YES_OPTION) {
-                JOptionPane.showMessageDialog(this, "¡La comanda fue generada con éxito!");
-                tableModel.setRowCount(0);
+        btnModificar.addActionListener(e -> {
+            int selectedRow = tablaPedido.getSelectedRow();
+            if (selectedRow != -1) {
+                tableModel.setValueAt(comboProducto.getSelectedItem(), selectedRow, 0);
+                tableModel.setValueAt(comboCategoria.getSelectedItem(), selectedRow, 1);
+                tableModel.setValueAt(spinnerCantidad.getValue(), selectedRow, 2);
+                tableModel.setValueAt(txtNotas.getText(), selectedRow, 3);
+                // Mantener el valor de mesa existente en la tabla
+                txtNotas.setText("");
+            } else {
+                JOptionPane.showMessageDialog(this, "Selecciona una fila para modificar.");
             }
         });
 
-        // Acción Eliminar 
         btnEliminar.addActionListener(e -> {
-            int selectedRow = resumenTable.getSelectedRow();
+            int selectedRow = tablaPedido.getSelectedRow();
             if (selectedRow != -1) {
                 tableModel.removeRow(selectedRow);
             } else {
@@ -172,13 +170,26 @@ public class GenerarComandaView extends JFrame {
             }
         });
 
-        // Botón volver 
+        // Botón guardar cambios
+        JButton btnConfirmar = new JButton("Guardar Cambios");
+        btnConfirmar.setBackground(new Color(0, 102, 204));
+        btnConfirmar.setForeground(Color.WHITE);
+        btnConfirmar.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        btnConfirmar.setPreferredSize(new Dimension(220, 40));
+        btnConfirmar.addActionListener(e -> JOptionPane.showMessageDialog(this, "¡Cambios guardados correctamente!"));
+
+        JPanel panelConfirmar = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        panelConfirmar.setOpaque(false);
+        panelConfirmar.add(btnConfirmar);
+        centerPanel.add(Box.createVerticalStrut(20));
+        centerPanel.add(panelConfirmar);
+
+        // Botón volver al Panel del Mesero
         JButton btnVolver = new JButton("← Volver al Panel del Mesero");
         btnVolver.setBackground(new Color(255, 140, 0));
         btnVolver.setForeground(Color.WHITE);
         btnVolver.setFont(new Font("Segoe UI", Font.BOLD, 14));
         btnVolver.setPreferredSize(new Dimension(250, 40));
-
         btnVolver.addActionListener(e -> {
             this.dispose();
             new WaiterPanelView().setVisible(true);
@@ -191,6 +202,3 @@ public class GenerarComandaView extends JFrame {
         mainPanel.add(bottomPanel, BorderLayout.SOUTH);
     }
 }
-
-
-

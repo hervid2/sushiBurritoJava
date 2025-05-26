@@ -1,11 +1,13 @@
 package main.java.com.restaurante.app.views.mesero;
-
+ 
 import com.formdev.flatlaf.FlatLightLaf;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.awt.event.ItemEvent;
+import java.awt.event.ItemListener;
 
 public class GenerarFacturaView extends JFrame {
 
@@ -14,6 +16,7 @@ public class GenerarFacturaView extends JFrame {
     private JLabel labelImpuesto;
     private JTextField campoPropina;
     private JLabel labelTotal;
+    private JTextField campoMesa; // Campo para mostrar número de mesa
 
     public GenerarFacturaView() {
         setupUI();
@@ -66,14 +69,38 @@ public class GenerarFacturaView extends JFrame {
 
         mainPanel.add(headerPanel, BorderLayout.NORTH);
 
-        // Selector de pedidos
+        // Selector de pedidos y mesa
         JPanel pedidoPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 10));
         pedidoPanel.setOpaque(false);
-        pedidoPanel.add(new JLabel("Seleccione pedido:"));
 
+        pedidoPanel.add(new JLabel("Seleccione pedido:"));
         comboPedidos = new JComboBox<>(new String[]{"Pedido #1", "Pedido #2", "Pedido #3"});
-        comboPedidos.setPreferredSize(new Dimension(200, 30));
+        comboPedidos.setPreferredSize(new Dimension(160, 30));
         pedidoPanel.add(comboPedidos);
+
+        pedidoPanel.add(new JLabel("Mesa:"));
+        campoMesa = new JTextField();
+        campoMesa.setPreferredSize(new Dimension(60, 30));
+        campoMesa.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        campoMesa.setEditable(false);
+        pedidoPanel.add(campoMesa);
+
+        // Actualizar campoMesa al cambiar pedido
+        comboPedidos.addItemListener(new ItemListener() {
+            @Override
+            public void itemStateChanged(ItemEvent e) {
+                if (e.getStateChange() == ItemEvent.SELECTED) {
+                    String pedido = (String) comboPedidos.getSelectedItem();
+                    // Simulación de mapeo pedido->mesa
+                    switch (pedido) {
+                        case "Pedido #1" -> campoMesa.setText("3");
+                        case "Pedido #2" -> campoMesa.setText("5");
+                        case "Pedido #3" -> campoMesa.setText("2");
+                        default -> campoMesa.setText("");
+                    }
+                }
+            }
+        });
 
         JButton generarFacturaBtn = new JButton("Generar Factura");
         generarFacturaBtn.setBackground(new Color(0, 128, 0));
@@ -82,8 +109,8 @@ public class GenerarFacturaView extends JFrame {
         generarFacturaBtn.setFocusPainted(false);
         generarFacturaBtn.setPreferredSize(new Dimension(160, 35));
         generarFacturaBtn.addActionListener(e -> {
-            // TODO: Lógica para calcular la factura y mostrar en la tabla
-            JOptionPane.showMessageDialog(this, "Factura generada para " + comboPedidos.getSelectedItem());
+            JOptionPane.showMessageDialog(this, "Factura generada para " + comboPedidos.getSelectedItem() +
+                    " (Mesa " + campoMesa.getText() + ")");
         });
 
         pedidoPanel.add(generarFacturaBtn);
@@ -130,11 +157,10 @@ public class GenerarFacturaView extends JFrame {
         volverBtn.setFont(new Font("Segoe UI", Font.BOLD, 14));
         volverBtn.setFocusPainted(false);
         volverBtn.setPreferredSize(new Dimension(250, 40));
-        
         volverBtn.addActionListener(e -> {
-        	this.dispose();
-        	new WaiterPanelView().setVisible(true);
-        	}); 
+            this.dispose();
+            new WaiterPanelView().setVisible(true);
+        });
 
         JPanel volverPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         volverPanel.setOpaque(false);
@@ -144,5 +170,6 @@ public class GenerarFacturaView extends JFrame {
         mainPanel.add(totalPanel, BorderLayout.SOUTH);
     }
 }
+
 
 
