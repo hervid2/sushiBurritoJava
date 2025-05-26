@@ -85,7 +85,7 @@ public class GenerarComandaView extends JFrame {
 
         JLabel lblCategoria = new JLabel("Categoría:");
         JComboBox<String> comboCategoria = new JComboBox<>(new String[]{
-                "Entrada", "Plato", "Postre", "Bebida", "Adicional"
+                "Infantil", "Bebidas", "Postres", "Entradas", "Platos Fuertes","Acompañamientos"
         });
         comboCategoria.setFont(new Font("Segoe UI", Font.PLAIN, 16));
 
