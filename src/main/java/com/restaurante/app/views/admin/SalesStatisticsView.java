@@ -2,14 +2,16 @@ package main.java.com.restaurante.app.views.admin;
 
 import com.formdev.flatlaf.FlatLightLaf;
 import com.toedter.calendar.JDateChooser;
+import main.java.com.restaurante.app.controllers.EstadisticasController;
+import main.java.com.restaurante.app.models.EstadisticaProductoDTO;
+import main.java.com.restaurante.app.models.Factura;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
 import org.apache.pdfbox.pdmodel.font.PDType1Font;
-import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
 import org.apache.pdfbox.pdmodel.font.Standard14Fonts;
-
+import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
@@ -18,10 +20,21 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.File;
 import java.io.IOException;
+import java.sql.SQLException;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
 
 public class SalesStatisticsView extends JFrame {
 
     private JTable salesTable;
+    private JLabel masVendidoLabel;
+    private JLabel menosVendidoLabel;
+    private JLabel totalIngresosLabel;
+    private JDateChooser startDateChooser;
+    private JDateChooser endDateChooser;
 
     public SalesStatisticsView() {
         setupUI();
@@ -30,9 +43,6 @@ public class SalesStatisticsView extends JFrame {
     private void setupUI() {
         try {
             UIManager.setLookAndFeel(new FlatLightLaf());
-            UIManager.put("Button.arc", 15);
-            UIManager.put("Component.arc", 20);
-            UIManager.put("TextComponent.arc", 20);
         } catch (Exception ex) {
             System.err.println("Error al configurar FlatLaf: " + ex.getMessage());
         }
@@ -56,7 +66,6 @@ public class SalesStatisticsView extends JFrame {
         centerPanel.setOpaque(false);
         centerPanel.setLayout(new BoxLayout(centerPanel, BoxLayout.Y_AXIS));
 
-        // Botón de retorno
         JLabel backLabel = new JLabel("← Volver al menú anterior", SwingConstants.CENTER);
         backLabel.setFont(new Font("Yu Gothic Medium", Font.PLAIN, 14));
         backLabel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
@@ -73,7 +82,6 @@ public class SalesStatisticsView extends JFrame {
         centerPanel.add(backLabel);
         centerPanel.add(Box.createVerticalStrut(10));
 
-        // Selección de periodo
         JPanel periodPanel = new JPanel();
         periodPanel.setOpaque(false);
         periodPanel.setLayout(new FlowLayout(FlowLayout.CENTER, 20, 10));
@@ -86,16 +94,15 @@ public class SalesStatisticsView extends JFrame {
         periodPanel.add(periodComboBox);
         centerPanel.add(periodPanel);
 
-        // Rangos de fechas con JCalendar
         JPanel datePanel = new JPanel();
         datePanel.setOpaque(false);
         datePanel.setLayout(new FlowLayout(FlowLayout.CENTER, 20, 10));
 
-        JDateChooser startDateChooser = new JDateChooser();
+        startDateChooser = new JDateChooser();
         startDateChooser.setDateFormatString("dd/MM/yyyy");
         startDateChooser.setPreferredSize(new Dimension(150, 30));
 
-        JDateChooser endDateChooser = new JDateChooser();
+        endDateChooser = new JDateChooser();
         endDateChooser.setDateFormatString("dd/MM/yyyy");
         endDateChooser.setPreferredSize(new Dimension(150, 30));
 
@@ -105,7 +112,6 @@ public class SalesStatisticsView extends JFrame {
         datePanel.add(endDateChooser);
         centerPanel.add(datePanel);
 
-        // Tabla de historial de ventas
         String[] columnNames = {"Fecha", "Productos", "Valor Total"};
         salesTable = new JTable(new DefaultTableModel(columnNames, 0));
         salesTable.setFont(new Font("Yu Gothic Medium", Font.PLAIN, 13));
@@ -116,7 +122,15 @@ public class SalesStatisticsView extends JFrame {
         centerPanel.add(Box.createVerticalStrut(20));
         centerPanel.add(tableScrollPane);
 
-        // Panel de botones
+        masVendidoLabel = new JLabel("Producto más vendido: N/A");
+        menosVendidoLabel = new JLabel("Producto menos vendido: N/A");
+        totalIngresosLabel = new JLabel("Total ingresos: $0.00");
+
+        for (JLabel label : new JLabel[]{masVendidoLabel, menosVendidoLabel, totalIngresosLabel}) {
+            label.setFont(new Font("Yu Gothic Medium", Font.PLAIN, 14));
+            centerPanel.add(label);
+        }
+
         JPanel buttonPanel = new JPanel();
         buttonPanel.setOpaque(false);
         buttonPanel.setLayout(new FlowLayout(FlowLayout.CENTER, 20, 10));
@@ -133,9 +147,41 @@ public class SalesStatisticsView extends JFrame {
             buttonPanel.add(button);
         }
 
-        // Acciones
         generateButton.addActionListener(e -> {
-            JOptionPane.showMessageDialog(this, "Lógica para generar estadísticas no implementada aún.");
+            try {
+                Date desde = startDateChooser.getDate();
+                Date hasta = endDateChooser.getDate();
+                if (desde == null || hasta == null) {
+                    JOptionPane.showMessageDialog(this, "Selecciona un rango de fechas válido.");
+                    return;
+                }
+
+                LocalDateTime desdeLdt = desde.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
+                LocalDateTime hastaLdt = hasta.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
+
+                EstadisticasController controller = new EstadisticasController();
+                Map<String, Object> datos = controller.generarEstadisticas(desdeLdt, hastaLdt);
+
+                List<Factura> facturas = (List<Factura>) datos.get("facturas");
+                DefaultTableModel model = (DefaultTableModel) salesTable.getModel();
+                model.setRowCount(0);
+
+                for (Factura f : facturas) {
+                    model.addRow(new Object[]{
+                            f.getFechaFactura().toLocalDate().toString(),
+                            "Pedido ID: " + f.getPedidoId(),
+                            "$" + String.format("%.2f", f.getTotal())
+                    });
+                }
+
+                masVendidoLabel.setText("Producto más vendido: " + ((EstadisticaProductoDTO) datos.get("masVendido")).getNombreProducto());
+                menosVendidoLabel.setText("Producto menos vendido: " + ((EstadisticaProductoDTO) datos.get("menosVendido")).getNombreProducto());
+                totalIngresosLabel.setText("Total ingresos: $" + String.format("%.2f", (double) datos.get("totalIngresos")));
+
+            } catch (SQLException ex) {
+                JOptionPane.showMessageDialog(this, "Error al obtener estadísticas: " + ex.getMessage());
+                ex.printStackTrace();
+            }
         });
 
         exportPDFButton.addActionListener(e -> {
@@ -152,17 +198,10 @@ public class SalesStatisticsView extends JFrame {
         centerPanel.add(buttonPanel);
         mainPanel.add(centerPanel, BorderLayout.CENTER);
 
-        // Footer
         JPanel footerPanel = new JPanel(new BorderLayout());
         footerPanel.setOpaque(false);
-
-        JLabel copyright =
-                new JLabel("© 2025 Sushi Burrito. Todos los derechos reservados.", SwingConstants.CENTER);
+        JLabel copyright = new JLabel("© 2025 Sushi Burrito. Todos los derechos reservados.", SwingConstants.CENTER);
         copyright.setFont(new Font("Yu Gothic Medium", Font.PLAIN, 12));
-        footerPanel.add(Box.createVerticalStrut(10), BorderLayout.NORTH);
-        footerPanel.add(Box.createVerticalStrut(10), BorderLayout.SOUTH);
-        footerPanel.add(Box.createVerticalStrut(10), BorderLayout.EAST);
-        footerPanel.add(Box.createVerticalStrut(10), BorderLayout.WEST);
         footerPanel.add(copyright, BorderLayout.CENTER);
         mainPanel.add(footerPanel, BorderLayout.SOUTH);
     }
@@ -173,13 +212,10 @@ public class SalesStatisticsView extends JFrame {
             document.addPage(page);
 
             PDPageContentStream content = new PDPageContentStream(document, page);
-
-            // Color de fondo
             content.setNonStrokingColor(255, 250, 205);
             content.addRect(0, 0, PDRectangle.A4.getWidth(), PDRectangle.A4.getHeight());
             content.fill();
 
-            // Logo
             try {
                 PDImageXObject logo = PDImageXObject.createFromFile("/main/resources/images/icons/logo.jpg", document);
                 content.drawImage(logo, 50, PDRectangle.A4.getHeight() - 100, 80, 80);
@@ -187,24 +223,24 @@ public class SalesStatisticsView extends JFrame {
                 System.err.println("No se pudo cargar el logo: " + ex.getMessage());
             }
 
-            // Título
-            
-            content.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 20);  
+            content.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 20);
             content.beginText();
             content.setNonStrokingColor(Color.BLACK);
             content.newLineAtOffset(150, PDRectangle.A4.getHeight() - 60);
             content.showText("Estadísticas de Ventas");
             content.endText();
 
-            // Placeholder de contenido
             content.beginText();
-            content.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 12);
-            content.newLineAtOffset(50, PDRectangle.A4.getHeight() - 150);
-            content.showText("Aquí irá el contenido de las estadísticas de ventas.");
+            content.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA), 12);
+            content.newLineAtOffset(50, PDRectangle.A4.getHeight() - 170);
+            content.showText(masVendidoLabel.getText());
+            content.newLineAtOffset(0, -15);
+            content.showText(menosVendidoLabel.getText());
+            content.newLineAtOffset(0, -15);
+            content.showText(totalIngresosLabel.getText());
             content.endText();
 
             content.close();
-
             document.save(file);
             JOptionPane.showMessageDialog(this, "PDF exportado exitosamente.");
         } catch (IOException ex) {
@@ -213,4 +249,3 @@ public class SalesStatisticsView extends JFrame {
         }
     }
 }
-
