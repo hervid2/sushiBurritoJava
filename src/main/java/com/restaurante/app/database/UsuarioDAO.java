@@ -1,7 +1,5 @@
 package main.java.com.restaurante.app.database;
 
-
-
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -15,7 +13,7 @@ public class UsuarioDAO {
         this.connection = Conexion.getConnection();
     }
 
-    public void insertarUsuario(Usuario usuario) throws SQLException {
+    public void insertar(Usuario usuario) throws SQLException {
         String sql = "INSERT INTO usuarios (nombre, rol, correo, contrasena) VALUES (?, ?, ?, ?)";
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setString(1, usuario.getNombre());
@@ -26,10 +24,10 @@ public class UsuarioDAO {
         }
     }
 
-    public Usuario obtenerUsuarioPorId(int id) throws SQLException {
-        String sql = "SELECT * FROM usuarios WHERE usuario_id = ?";
+    public Usuario obtenerPorCorreo(String correo) throws SQLException {
+        String sql = "SELECT * FROM usuarios WHERE correo = ?";
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
-            stmt.setInt(1, id);
+            stmt.setString(1, correo);
             ResultSet rs = stmt.executeQuery();
             if (rs.next()) {
                 return mapUsuario(rs);
@@ -38,7 +36,7 @@ public class UsuarioDAO {
         return null;
     }
 
-    public List<Usuario> obtenerTodosLosUsuarios() throws SQLException {
+    public List<Usuario> obtenerTodos() throws SQLException {
         List<Usuario> usuarios = new ArrayList<>();
         String sql = "SELECT * FROM usuarios";
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
@@ -50,7 +48,7 @@ public class UsuarioDAO {
         return usuarios;
     }
 
-    public void actualizarUsuario(Usuario usuario) throws SQLException {
+    public void actualizar(Usuario usuario) throws SQLException {
         String sql = "UPDATE usuarios SET nombre = ?, rol = ?, correo = ?, contrasena = ? WHERE usuario_id = ?";
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setString(1, usuario.getNombre());
@@ -62,11 +60,11 @@ public class UsuarioDAO {
         }
     }
 
-    public void eliminarUsuario(int id) throws SQLException {
+    public boolean eliminar(int id) throws SQLException {
         String sql = "DELETE FROM usuarios WHERE usuario_id = ?";
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setInt(1, id);
-            stmt.executeUpdate();
+            return stmt.executeUpdate() > 0;
         }
     }
 
@@ -79,4 +77,4 @@ public class UsuarioDAO {
         u.setContrasena(rs.getString("contrasena"));
         return u;
     }
-}
+} 

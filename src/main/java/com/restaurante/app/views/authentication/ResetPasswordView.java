@@ -1,9 +1,12 @@
 package main.java.com.restaurante.app.views.authentication;
 
 import com.formdev.flatlaf.FlatLightLaf;
+import main.java.com.restaurante.app.controllers.UsuarioController;
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
+import java.sql.SQLException;
 
 public class ResetPasswordView extends BaseAuthView {
     private JTextField textFieldUsuario;
@@ -57,54 +60,62 @@ public class ResetPasswordView extends BaseAuthView {
         btnIngresar.setForeground(Color.WHITE);
         btnIngresar.setBounds(24, 142, 316, 45);
         btnIngresar.setFocusPainted(false);
-        btnIngresar.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseEntered(MouseEvent e) {
-                btnIngresar.setBackground(new Color(255, 140, 0));
+        btnIngresar.addActionListener(e -> {
+            String correo = textFieldUsuario.getText();
+            if (correo == null || correo.trim().isEmpty()) {
+                JOptionPane.showMessageDialog(frame, "Por favor ingresa un correo o nombre de usuario.");
+                return;
             }
 
-            @Override
-            public void mouseExited(MouseEvent e) {
-                btnIngresar.setBackground(new Color(0, 128, 0));
+            try {
+                UsuarioController controller = new UsuarioController();
+                if (controller.usuarioExistePorCorreo(correo)) {
+                    dispose();
+                    new SetNewPasswordView(correo).setVisible(true);
+                } else {
+                    JOptionPane.showMessageDialog(frame, "No se encontró ningún usuario con ese correo.");
+                }
+            } catch (SQLException ex) {
+                JOptionPane.showMessageDialog(frame, "Error al validar el usuario:\n" + ex.getMessage());
+                ex.printStackTrace();
             }
         });
         panel.add(btnIngresar);
 
         JLabel lblPromptLogin2 = new JLabel("Volver al inicio de sesión");
-        lblPromptLogin2.setFont(new Font("Yu Gothic Medium", Font.PLAIN, 13));
-        lblPromptLogin2.setForeground(new Color(0, 100, 200));
-        lblPromptLogin2.setBounds(34, 198, 300, 20);
-        lblPromptLogin2.setHorizontalAlignment(SwingConstants.CENTER);
-        lblPromptLogin2.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        lblPromptLogin2.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                frame.dispose();
-                LoginView loginView = new LoginView();
-                loginView.setVisible(true);
-            }
-        });
-        panel.add(lblPromptLogin2);
+        lblPromptLogin2.setFont(new Font("Yu Gothic Medium", Font.PLAIN, 13)); 
+        lblPromptLogin2.setForeground(new Color(0, 100, 200)); 
+        lblPromptLogin2.setBounds(34, 198, 300, 20); 
+        lblPromptLogin2.setHorizontalAlignment(SwingConstants.CENTER); 
+        lblPromptLogin2.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)); 
+        lblPromptLogin2.addMouseListener(new MouseAdapter() { 
+            @Override 
+            public void mouseClicked(MouseEvent e) { 
+                frame.dispose(); 
+                LoginView loginView = new LoginView(); 
+                loginView.setVisible(true); 
+            } 
+        }); 
+        panel.add(lblPromptLogin2); 
 
-        JList<String> list = new JList<>();
-        list.setBackground(new Color(255, 250, 205));
-        list.setModel(new AbstractListModel<String>() {
-            String[] values = {
-                "Por favor, ingresa tu correo electrónico ",
-                "registrado o tu nombre de usuario para",
-                "         reestablecer tu contraseña"
-            };
+        JList<String> list = new JList<>(); 
+        list.setBackground(new Color(255, 250, 205)); 
+        list.setModel(new AbstractListModel<String>() { 
+            String[] values = { 
+                "Por favor, ingresa tu correo electrónico ", 
+                "registrado o tu nombre de usuario para", 
+                "         reestablecer tu contraseña" 
+            }; 
 
-            public int getSize() { return values.length; }
-            public String getElementAt(int index) { return values[index]; }
-        });
-        list.setFont(new Font("Yu Gothic Medium", Font.PLAIN, 14));
-        list.setBounds(97, 157, 280, 89);
-        panelFormLogin.add(list);
+            public int getSize() { return values.length; } 
+            public String getElementAt(int index) { return values[index]; } 
+        }); 
+        list.setFont(new Font("Yu Gothic Medium", Font.PLAIN, 14)); 
+        list.setBounds(97, 157, 280, 89); 
+        panelFormLogin.add(list); 
 
-        SwingUtilities.invokeLater(() -> {
-            SwingUtilities.updateComponentTreeUI(panelFormLogin);
-        });
-    }
-}
-
+        SwingUtilities.invokeLater(() -> { 
+            SwingUtilities.updateComponentTreeUI(panelFormLogin); 
+        }); 
+    } 
+} 

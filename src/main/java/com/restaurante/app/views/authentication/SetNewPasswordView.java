@@ -1,29 +1,26 @@
 package main.java.com.restaurante.app.views.authentication;
 
 import com.formdev.flatlaf.FlatLightLaf;
+import main.java.com.restaurante.app.controllers.UsuarioController;
+
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 
 public class SetNewPasswordView extends BaseAuthView {
     private JTextField textFieldNewPassword;
     private JTextField textFieldNewPasswordConfirm;
+    private final String correo;
 
-    static {
-        try {
-            UIManager.setLookAndFeel(new FlatLightLaf());
-            UIManager.put("Component.arc", 20);
-            UIManager.put("TextComponent.arc", 20);
-            UIManager.put("TextComponent.borderColor", new Color(200, 200, 200));
-            UIManager.put("Component.focusWidth", 1);
-        } catch (Exception ex) {
-            System.err.println("Error al configurar FlatLaf: " + ex.getMessage());
-        }
+    public SetNewPasswordView(String correo) {
+    	super();
+        this.correo = correo;
     }
 
     @Override
     protected String getBackgroundImagePath() {
-        return "/main/resources/images/ui/imagenLoginForgotPassword.jpg"; 
+        return "/main/resources/images/ui/imagenLoginForgotPassword.jpg";
     }
 
     @Override
@@ -45,7 +42,7 @@ public class SetNewPasswordView extends BaseAuthView {
         lblNewPassword.setBounds(20, 38, 173, 25);
         panel.add(lblNewPassword);
 
-        textFieldNewPassword = new JTextField();
+        textFieldNewPassword = new JPasswordField();
         textFieldNewPassword.setToolTipText("Ingresa una nueva contraseña");
         textFieldNewPassword.putClientProperty("JTextField.placeholderText", "Nueva Contraseña");
         textFieldNewPassword.setFont(new Font("Yu Gothic Medium", Font.PLAIN, 14));
@@ -57,7 +54,7 @@ public class SetNewPasswordView extends BaseAuthView {
         lblNewPasswordConfirm.setBounds(20, 125, 186, 25);
         panel.add(lblNewPasswordConfirm);
 
-        textFieldNewPasswordConfirm = new JTextField();
+        textFieldNewPasswordConfirm = new JPasswordField();
         textFieldNewPasswordConfirm.setToolTipText("Ingresa de nuevo la contraseña ingresada anteriormente");
         textFieldNewPasswordConfirm.putClientProperty("JTextField.placeholderText", "Confirmar Contraseña");
         textFieldNewPasswordConfirm.setFont(new Font("Yu Gothic Medium", Font.PLAIN, 14));
@@ -70,15 +67,30 @@ public class SetNewPasswordView extends BaseAuthView {
         btnReestablecerContrasena.setForeground(Color.WHITE);
         btnReestablecerContrasena.setBounds(24, 211, 316, 45);
         btnReestablecerContrasena.setFocusPainted(false);
-        btnReestablecerContrasena.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseEntered(MouseEvent e) {
-                btnReestablecerContrasena.setBackground(new Color(255, 140, 0));
+        btnReestablecerContrasena.addActionListener(e -> {
+            String nueva = textFieldNewPassword.getText();
+            String confirmar = textFieldNewPasswordConfirm.getText();
+
+            if (nueva.isEmpty() || confirmar.isEmpty()) {
+                JOptionPane.showMessageDialog(frame, "Por favor completa ambos campos.");
+                return;
             }
 
-            @Override
-            public void mouseExited(MouseEvent e) {
-                btnReestablecerContrasena.setBackground(new Color(0, 128, 0));
+            if (!nueva.equals(confirmar)) {
+                JOptionPane.showMessageDialog(frame, "Las contraseñas no coinciden.");
+                return;
+            }
+
+            try {
+                UsuarioController controller = new UsuarioController();
+                if (controller.actualizarContrasena(correo, nueva)) {
+                    JOptionPane.showMessageDialog(frame, "Contraseña actualizada correctamente.");
+                } else {
+                    JOptionPane.showMessageDialog(frame, "No se pudo actualizar la contraseña. Verifica el correo.");
+                }
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(frame, "Error al actualizar la contraseña: " + ex.getMessage());
+                ex.printStackTrace();
             }
         });
         panel.add(btnReestablecerContrasena);
@@ -93,29 +105,9 @@ public class SetNewPasswordView extends BaseAuthView {
             @Override
             public void mouseClicked(MouseEvent e) {
                 frame.dispose();
-                LoginView loginView = new LoginView();
-                loginView.setVisible(true);
+                new LoginView().setVisible(true);
             }
         });
         panel.add(lblPromptLogin2);
-
-        JList<String> lblPromptLogin = new JList<>();
-        lblPromptLogin.setBackground(new Color(255, 250, 205));
-        lblPromptLogin.setModel(new AbstractListModel<String>() {
-            String[] values = {
-                "Por favor, ingresa tu nueva contraseña",
-                "                   para actualizarla."
-            };
-
-            public int getSize() { return values.length; }
-            public String getElementAt(int index) { return values[index]; }
-        });
-        lblPromptLogin.setFont(new Font("Yu Gothic Medium", Font.PLAIN, 14));
-        lblPromptLogin.setBounds(97, 157, 280, 89);
-        panelFormLogin.add(lblPromptLogin);
-
-        SwingUtilities.invokeLater(() -> {
-            SwingUtilities.updateComponentTreeUI(panelFormLogin);
-        });
     }
 }

@@ -1,10 +1,12 @@
 package main.java.com.restaurante.app.views.authentication;
 
 import com.formdev.flatlaf.FlatLightLaf;
+import main.java.com.restaurante.app.controllers.UsuarioController;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.sql.SQLException;
 
 public class LoginView extends BaseAuthView {
     private JTextField textFieldUsuario;
@@ -97,6 +99,21 @@ public class LoginView extends BaseAuthView {
             }
         });
         panel.add(btnIngresar);
+        
+        // Logica para validar las credenciales de Usuario
+        btnIngresar.addActionListener(e -> {
+            String correo = textFieldUsuario.getText();
+            String contrasena = new String(textFieldContrasena.getPassword());
+
+            try {
+                UsuarioController controller = new UsuarioController();
+                controller.login(correo, contrasena, frame);
+            } catch (SQLException ex) {
+                JOptionPane.showMessageDialog(frame, "Error al conectar con la base de datos:\n" + ex.getMessage());
+                ex.printStackTrace();
+            }
+        });
+
 
         JLabel lblPromptLogin2 = new JLabel("¿Olvidaste tu contraseña?");
         lblPromptLogin2.setFont(new Font("Yu Gothic Medium", Font.PLAIN, 13));
