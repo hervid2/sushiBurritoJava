@@ -1,24 +1,57 @@
 package main.java.com.restaurante.app.views.admin;
 
 import com.formdev.flatlaf.FlatLightLaf;
+import main.java.com.restaurante.app.controllers.ProductoController;
+import main.java.com.restaurante.app.models.Producto;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableRowSorter;
+
 import java.awt.*;
 import java.awt.event.*;
+import java.sql.SQLException;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map; // Importar Map
+import java.util.regex.Pattern;
 
 public class MenuManagement extends JFrame {
 
     private JTable table;
     private JTextField searchField;
-    
-    private String[] categorias = {"Infantil", "Bebidas", "Postres", "Entradas", "Platos Fuertes", "Acompañamientos"};
+    private ProductoController productoController;
+    private DefaultTableModel model;
+    private String[] categoriasNombres; // Array de nombres de categorías para JComboBox
+    private Map<Integer, String> categoriasIdNombreMap; // Mapa para obtener el nombre de la categoría por su ID
+    private Map<String, Integer> categoriasNombreIdMap; // Mapa para obtener el ID de la categoría por su nombre
 
+    /**
+     * Constructor de MenuManagement.
+     * Inicializa el controlador de productos y carga las categorías desde la base de datos.
+     */
     public MenuManagement() {
+        try {
+            this.productoController = new ProductoController();
+            // Cargar los nombres de las categorías para el JComboBox (orden alfabético por el DAO)
+            this.categoriasNombres = productoController.obtenerCategorias();
+            // Cargar los mapas para la conversión eficiente entre ID y nombre de categoría
+            this.categoriasIdNombreMap = productoController.obtenerMapaCategoriasIdNombre();
+            this.categoriasNombreIdMap = productoController.obtenerMapaCategoriasNombreId();
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Error al conectar con la base de datos o al cargar categorías: " + e.getMessage(), "Error de Conexión", JOptionPane.ERROR_MESSAGE);
+            e.printStackTrace();
+            // Si hay un error de conexión, se puede optar por salir de la aplicación o deshabilitar funcionalidades
+            return;
+        }
         setupUI();
+        cargarProductosEnTabla();
     }
 
+    /**
+     * Configura la interfaz de usuario de la ventana de gestión de menú.
+     */
     private void setupUI() {
         try {
             UIManager.setLookAndFeel(new FlatLightLaf());
@@ -31,11 +64,11 @@ public class MenuManagement extends JFrame {
 
         setTitle("Gestión de Carta - Sushi Burrito");
         setSize(1150, 700);
-        setLocationRelativeTo(null);
-        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        setLocationRelativeTo(null); // Centra la ventana en la pantalla
+        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE); // Cierra solo esta ventana
 
         JPanel mainPanel = new JPanel(new BorderLayout(20, 10));
-        mainPanel.setBackground(new Color(255, 250, 205)); // Un color crema suave
+        mainPanel.setBackground(new Color(255, 250, 205)); // Amarillo claro
         mainPanel.setBorder(new EmptyBorder(20, 20, 20, 20));
         setContentPane(mainPanel);
 
@@ -51,58 +84,69 @@ public class MenuManagement extends JFrame {
         JPanel leftPanel = new JPanel(new BorderLayout(10, 10));
         leftPanel.setOpaque(false);
 
-        // Los botones "Agregar", "Editar", "Eliminar"
-        // Aumentado el gap horizontal a 20 para hacerlos parecer menos anchos
-        JPanel actionButtonPanel = new JPanel(new GridLayout(1, 3, 20, 10)); 
+        JPanel actionButtonPanel = new JPanel(new GridLayout(1, 3, 20, 10));
         actionButtonPanel.setOpaque(false);
 
         JButton addButton = createStyledButton("Agregar");
         JButton editButton = createStyledButton("Editar");
         JButton deleteButton = createStyledButton("Eliminar");
-        
-        // Ajustando el tamaño preferido para los botones de acción para darles más altura
-        Dimension buttonSize = new Dimension(100, 45); // Ancho fijo, altura aumentada
+
+        Dimension buttonSize = new Dimension(100, 45);
         addButton.setPreferredSize(buttonSize);
         editButton.setPreferredSize(buttonSize);
         deleteButton.setPreferredSize(buttonSize);
-        
+
         actionButtonPanel.add(addButton);
         actionButtonPanel.add(editButton);
         actionButtonPanel.add(deleteButton);
-        
-        leftPanel.add(actionButtonPanel, BorderLayout.NORTH); 
 
-        // Configuración de la tabla con la nueva columna "Categoría"
+        leftPanel.add(actionButtonPanel, BorderLayout.NORTH);
+
         table = new JTable();
-        String[] columns = {"Nombre", "Ingredientes", "Valor Neto", "IVA", "Valor Venta", "Categoría"}; 
-        DefaultTableModel model = new DefaultTableModel(columns, 0);
+        // Se agregó la columna "ID" para almacenar el producto_id, la cual se ocultará.
+        String[] columns = {"ID", "Nombre", "Ingredientes", "Valor Neto", "Impuesto Consumo", "Valor Venta", "Categoría"};
+        model = new DefaultTableModel(columns, 0);
         table.setModel(model);
         table.setRowHeight(28);
         table.setFont(new Font("Segoe UI", Font.PLAIN, 14));
         JScrollPane scrollPane = new JScrollPane(table);
         leftPanel.add(scrollPane, BorderLayout.CENTER);
 
+        // Ocultar la columna de ID (índice 0)
+        table.getColumnModel().getColumn(0).setMinWidth(0);
+        table.getColumnModel().getColumn(0).setMaxWidth(0);
+        table.getColumnModel().getColumn(0).setWidth(0);
+        table.getColumnModel().getColumn(0).setPreferredWidth(0); // También establecer el ancho preferido
+        table.getTableHeader().getColumnModel().getColumn(0).setMinWidth(0); // Ocultar encabezado
+        table.getTableHeader().getColumnModel().getColumn(0).setMaxWidth(0); // Ocultar encabezado
+
+
         centerPanel.add(leftPanel, BorderLayout.CENTER);
 
-        // --- Panel para el campo de búsqueda y su label ---
         JPanel searchAndClearPanel = new JPanel();
-        // Cambiado FlowLayout.RIGHT a FlowLayout.CENTER para centrar los elementos
-        searchAndClearPanel.setLayout(new FlowLayout(FlowLayout.CENTER, 10, 10)); 
-        searchAndClearPanel.setPreferredSize(new Dimension(250, 80)); 
+        searchAndClearPanel.setLayout(new FlowLayout(FlowLayout.CENTER, 10, 10));
+        searchAndClearPanel.setPreferredSize(new Dimension(250, 80));
         searchAndClearPanel.setOpaque(false);
 
         JLabel filterLabel = new JLabel("Filtrar por nombre:");
         filterLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
         searchAndClearPanel.add(filterLabel);
 
-        searchField = new JTextField(15); 
+        searchField = new JTextField(15);
         searchField.setToolTipText("Buscar por nombre...");
         searchAndClearPanel.add(searchField);
-        
-        JButton clearButton = createStyledButton("Limpiar"); 
+
+        JButton clearButton = createStyledButton("Limpiar");
         searchAndClearPanel.add(clearButton);
 
-        centerPanel.add(searchAndClearPanel, BorderLayout.EAST); 
+        // Listener para el campo de búsqueda para filtrar la tabla dinámicamente
+        searchField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+            public void insertUpdate(javax.swing.event.DocumentEvent e) { filtrarTabla(); }
+            public void removeUpdate(javax.swing.event.DocumentEvent e) { filtrarTabla(); }
+            public void changedUpdate(javax.swing.event.DocumentEvent e) { filtrarTabla(); }
+        });
+
+        centerPanel.add(searchAndClearPanel, BorderLayout.EAST);
 
         JPanel footerPanel = new JPanel(new BorderLayout());
         footerPanel.setOpaque(false);
@@ -114,9 +158,10 @@ public class MenuManagement extends JFrame {
         backLabel.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                AdminPanelView adminPanel = new AdminPanelView();
+                // Navegar de vuelta al panel de administrador
+                main.java.com.restaurante.app.views.admin.AdminPanelView adminPanel = new main.java.com.restaurante.app.views.admin.AdminPanelView();
                 adminPanel.setVisible(true);
-                dispose();
+                dispose(); // Cierra la ventana actual
             }
         });
 
@@ -132,29 +177,320 @@ public class MenuManagement extends JFrame {
         addButton.addActionListener(e -> mostrarVentanaAgregarProducto());
         editButton.addActionListener(e -> mostrarVentanaEditarProducto());
         deleteButton.addActionListener(e -> mostrarConfirmacionEliminar());
-        clearButton.addActionListener(e -> searchField.setText("")); 
+        clearButton.addActionListener(e -> {
+            searchField.setText("");
+            filtrarTabla(); // Limpiar el filtro
+        });
 
-        // Efectos hover 
+        // Añadir efectos hover a los botones
         agregarEfectoHover(addButton);
         agregarEfectoHover(editButton);
         agregarEfectoHover(deleteButton);
         agregarEfectoHover(clearButton);
     }
 
+    /**
+     * Muestra una ventana de diálogo para agregar un nuevo producto.
+     */
+    private void mostrarVentanaAgregarProducto() {
+        JTextField nombre = new JTextField();
+        JTextField ingredientes = new JTextField();
+        JTextField valorNeto = new JTextField();
+        JTextField impuestoConsumo = new JTextField();
+        JTextField valorVenta = new JTextField();
+        JComboBox<String> categoriaBox = new JComboBox<>(categoriasNombres); // Usar el array de nombres de categorías
+
+        impuestoConsumo.setEditable(false); // Campo no editable, se calcula
+        valorVenta.setEditable(false);     // Campo no editable, se calcula
+
+        JPanel panel = new JPanel(new GridLayout(0, 1, 5, 5));
+        panel.add(new JLabel("Nombre:")); panel.add(nombre);
+        panel.add(new JLabel("Ingredientes:")); panel.add(ingredientes);
+        panel.add(new JLabel("Valor Neto:")); panel.add(valorNeto);
+        panel.add(new JLabel("Impuesto Consumo (8%):")); panel.add(impuestoConsumo);
+        panel.add(new JLabel("Valor Venta:")); panel.add(valorVenta);
+        panel.add(new JLabel("Categoría:")); panel.add(categoriaBox);
+
+        // Runnable para actualizar los campos calculados automáticamente
+        Runnable updateCalculatedFields = () -> {
+            try {
+                String valorNetoStr = valorNeto.getText().trim();
+                if (valorNetoStr.isEmpty()) {
+                    impuestoConsumo.setText("");
+                    valorVenta.setText("");
+                    return;
+                }
+                double neto = Double.parseDouble(valorNetoStr.replace(',', '.')); // Soporte para coma o punto decimal
+                 if (neto < 0) {
+                     JOptionPane.showMessageDialog(this, "El valor neto no puede ser negativo.", "Valor inválido", JOptionPane.WARNING_MESSAGE);
+                     // Eliminar el último carácter ingresado para corregir el negativo
+                     valorNeto.setText(valorNetoStr.substring(0, Math.max(0, valorNetoStr.length() -1 )));
+                     impuestoConsumo.setText("");
+                     valorVenta.setText("");
+                     return;
+                }
+
+                double calculatedImpuesto = neto * 0.08;
+                double calculatedVenta = neto + calculatedImpuesto;
+
+                impuestoConsumo.setText(String.format(Locale.US, "%.2f", calculatedImpuesto));
+                valorVenta.setText(String.format(Locale.US, "%.2f", calculatedVenta));
+
+            } catch (NumberFormatException nfe) {
+                // Si el valor neto no es un número válido, borrar los campos calculados
+                impuestoConsumo.setText("");
+                valorVenta.setText("");
+            }
+        };
+
+        // Listener para actualizar los campos calculados cuando el valor neto cambia
+        valorNeto.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+            public void insertUpdate(javax.swing.event.DocumentEvent e) { updateCalculatedFields.run(); }
+            public void removeUpdate(javax.swing.event.DocumentEvent e) { updateCalculatedFields.run(); }
+            public void changedUpdate(javax.swing.event.DocumentEvent e) { updateCalculatedFields.run(); }
+        });
+
+        int result = JOptionPane.showConfirmDialog(this, panel, "Nuevo Producto", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+        if (result == JOptionPane.OK_OPTION) {
+            // Validar campos obligatorios
+            if (nombre.getText().trim().isEmpty() || valorNeto.getText().trim().isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Por favor completa los campos obligatorios: Nombre y Valor Neto.", "Campos incompletos", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            try {
+                String valorNetoStr = valorNeto.getText().trim().replace(',', '.');
+                double neto = Double.parseDouble(valorNetoStr);
+
+                if (neto < 0) {
+                    JOptionPane.showMessageDialog(this, "El valor neto no puede ser negativo.", "Valor inválido", JOptionPane.WARNING_MESSAGE);
+                    return;
+                }
+
+                Producto nuevo = new Producto();
+                nuevo.setNombre(nombre.getText().trim());
+                nuevo.setIngredientes(ingredientes.getText().trim());
+                nuevo.setValorNeto(neto);
+
+                double impuestoCalculado = neto * 0.08;
+                double valorVentaCalculado = neto + impuestoCalculado;
+
+                nuevo.setImpuesto(impuestoCalculado);
+                nuevo.setValorVenta(valorVentaCalculado);
+
+                // Obtener el ID de la categoría del mapa usando el nombre seleccionado
+                String selectedCategoryName = (String) categoriaBox.getSelectedItem();
+                Integer categoriaId = categoriasNombreIdMap.get(selectedCategoryName);
+                if (categoriaId == null) {
+                    throw new SQLException("Categoría seleccionada no encontrada en el mapa: " + selectedCategoryName);
+                }
+                nuevo.setCategoriaId(categoriaId);
+
+                productoController.insertar(nuevo); // Insertar el nuevo producto
+                cargarProductosEnTabla(); // Recargar la tabla para mostrar el nuevo producto
+                JOptionPane.showMessageDialog(this, "Producto agregado exitosamente.", "Éxito", JOptionPane.INFORMATION_MESSAGE);
+            } catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(this, "Valor Neto inválido. Debe ser un número.", "Error de Formato", JOptionPane.ERROR_MESSAGE);
+            }
+            catch (Exception ex) {
+                JOptionPane.showMessageDialog(this, "Error al insertar producto: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                ex.printStackTrace(); // Imprimir el stack trace para depuración
+            }
+        }
+    }
+
+    /**
+     * Muestra una ventana de diálogo para editar un producto existente.
+     * Carga los datos del producto seleccionado en los campos de edición.
+     */
+    private void mostrarVentanaEditarProducto() {
+        int selectedRow = table.getSelectedRow();
+        if (selectedRow == -1) {
+            JOptionPane.showMessageDialog(this, "Selecciona un producto para editar.", "Advertencia", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        int modelRow = table.convertRowIndexToModel(selectedRow);
+
+        // Recuperar el producto_id de la columna oculta (índice 0)
+        int productoId = (int) model.getValueAt(modelRow, 0);
+
+        // Recuperar otros valores, ajustando los índices debido a la nueva columna "ID"
+        String nombreSeleccionado = model.getValueAt(modelRow, 1).toString();
+        String ingredientesSeleccionado = model.getValueAt(modelRow, 2).toString();
+        String valorNetoSeleccionado = model.getValueAt(modelRow, 3).toString(); // Ahora en el índice 3
+        String categoriaActualTabla = model.getValueAt(modelRow, 6).toString(); // Ahora en el índice 6, este es el nombre de la tabla
+
+        JTextField nombre = new JTextField(nombreSeleccionado);
+        JTextField ingredientes = new JTextField(ingredientesSeleccionado);
+        JTextField valorNeto = new JTextField(); // Se establecerá y activará el listener
+        JTextField impuestoConsumo = new JTextField();
+        JTextField valorVenta = new JTextField();
+        JComboBox<String> categoriaBox = new JComboBox<>(categoriasNombres); // Usar el array de nombres de categorías
+        categoriaBox.setSelectedItem(categoriaActualTabla); // Establecer la categoría actualmente mostrada
+
+        impuestoConsumo.setEditable(false);
+        valorVenta.setEditable(false);
+
+        JPanel panel = new JPanel(new GridLayout(0, 1, 5, 5));
+        panel.add(new JLabel("Nombre:")); panel.add(nombre);
+        panel.add(new JLabel("Ingredientes:")); panel.add(ingredientes);
+        panel.add(new JLabel("Valor Neto:")); panel.add(valorNeto);
+        panel.add(new JLabel("Impuesto Consumo (8%):")); panel.add(impuestoConsumo);
+        panel.add(new JLabel("Valor Venta:")); panel.add(valorVenta);
+        panel.add(new JLabel("Categoría:")); panel.add(categoriaBox);
+
+        Runnable updateCalculatedFields = () -> {
+            try {
+                String valorNetoStr = valorNeto.getText().trim();
+                if (valorNetoStr.isEmpty()) {
+                    impuestoConsumo.setText("");
+                    valorVenta.setText("");
+                    return;
+                }
+                double neto = Double.parseDouble(valorNetoStr.replace(',', '.'));
+                 if (neto < 0) {
+                     JOptionPane.showMessageDialog(this, "El valor neto no puede ser negativo.", "Valor inválido", JOptionPane.WARNING_MESSAGE);
+                     valorNeto.setText(valorNetoStr.substring(0, Math.max(0, valorNetoStr.length() -1 )));
+                     impuestoConsumo.setText("");
+                     valorVenta.setText("");
+                     return;
+                }
+                double calculatedImpuesto = neto * 0.08;
+                double calculatedVenta = neto + calculatedImpuesto;
+
+                impuestoConsumo.setText(String.format(Locale.US, "%.2f", calculatedImpuesto));
+                valorVenta.setText(String.format(Locale.US, "%.2f", calculatedVenta));
+            } catch (NumberFormatException nfe) {
+                impuestoConsumo.setText("");
+                valorVenta.setText("");
+            }
+        };
+
+        valorNeto.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+            public void insertUpdate(javax.swing.event.DocumentEvent e) { updateCalculatedFields.run(); }
+            public void removeUpdate(javax.swing.event.DocumentEvent e) { updateCalculatedFields.run(); }
+            public void changedUpdate(javax.swing.event.DocumentEvent e) { updateCalculatedFields.run(); }
+        });
+
+        // Establecer el valor neto inicial, esto activará el listener para poblar otros campos
+        valorNeto.setText(valorNetoSeleccionado);
+
+        int result = JOptionPane.showConfirmDialog(this, panel, "Editar Producto", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+        if (result == JOptionPane.OK_OPTION) {
+            if (nombre.getText().trim().isEmpty() || valorNeto.getText().trim().isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Por favor completa los campos obligatorios: Nombre y Valor Neto.", "Campos incompletos", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            try {
+                String valorNetoStr = valorNeto.getText().trim().replace(',', '.');
+                double neto = Double.parseDouble(valorNetoStr);
+
+                if (neto < 0) {
+                    JOptionPane.showMessageDialog(this, "El valor neto no puede ser negativo.", "Valor inválido", JOptionPane.WARNING_MESSAGE);
+                    return;
+                }
+
+                Producto actualizado = new Producto();
+                actualizado.setId(productoId); // Establecer el ID real del producto para la operación de actualización
+                actualizado.setNombre(nombre.getText().trim());
+                actualizado.setIngredientes(ingredientes.getText().trim());
+                actualizado.setValorNeto(neto);
+
+                double impuestoCalculado = neto * 0.08;
+                double valorVentaCalculado = neto + impuestoCalculado;
+
+                actualizado.setImpuesto(impuestoCalculado);
+                actualizado.setValorVenta(valorVentaCalculado);
+
+                // Obtener el ID de la categoría del mapa usando el nombre seleccionado
+                String selectedCategoryName = (String) categoriaBox.getSelectedItem();
+                Integer categoriaId = categoriasNombreIdMap.get(selectedCategoryName);
+                if (categoriaId == null) {
+                    throw new SQLException("Categoría seleccionada no encontrada en el mapa: " + selectedCategoryName);
+                }
+                actualizado.setCategoriaId(categoriaId);
+
+                productoController.actualizar(actualizado); // Actualizar el producto
+                cargarProductosEnTabla(); // Recargar la tabla
+                JOptionPane.showMessageDialog(this, "Producto actualizado exitosamente.", "Éxito", JOptionPane.INFORMATION_MESSAGE);
+            } catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(this, "Valor Neto inválido. Debe ser un número.", "Error de Formato", JOptionPane.ERROR_MESSAGE);
+            }
+            catch (Exception ex) {
+                JOptionPane.showMessageDialog(this, "Error al actualizar producto: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                ex.printStackTrace();
+            }
+        }
+    }
+
+    /**
+     * Carga todos los productos de la base de datos en la tabla.
+     */
+    private void cargarProductosEnTabla() {
+        try {
+            List<Producto> productos = productoController.obtenerTodos();
+            model.setRowCount(0); // Limpiar los datos existentes en la tabla
+            for (Producto p : productos) {
+                // Obtener el nombre de la categoría del mapa usando el ID de la categoría del producto
+                String categoriaNombre = categoriasIdNombreMap.getOrDefault(p.getCategoriaId(), "Desconocida");
+
+                model.addRow(new Object[]{
+                    p.getId(), // Añadir el ID del producto como el primer elemento (columna oculta)
+                    p.getNombre(),
+                    p.getIngredientes(),
+                    String.format(Locale.US, "%.2f", p.getValorNeto()), // Formatear para mostrar
+                    String.format(Locale.US, "%.2f", p.getImpuesto()), // Formatear para mostrar
+                    String.format(Locale.US, "%.2f", p.getValorVenta()), // Formatear para mostrar
+                    categoriaNombre // Usar el nombre de categoría obtenido del mapa
+                });
+            }
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Error al cargar productos: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Filtra la tabla de productos basándose en el texto ingresado en el campo de búsqueda.
+     */
+    private void filtrarTabla() {
+        TableRowSorter<DefaultTableModel> sorter = new TableRowSorter<>(model);
+        table.setRowSorter(sorter);
+        String texto = searchField.getText().trim();
+        if (texto.isEmpty()) {
+            sorter.setRowFilter(null); // No hay filtro si el campo está vacío
+        } else {
+            // Filtro insensible a mayúsculas/minúsculas en la columna 'Nombre' (índice 1)
+            sorter.setRowFilter(RowFilter.regexFilter("(?i)" + Pattern.quote(texto), 1));
+        }
+    }
+
+    /**
+     * Crea un JButton con estilo predefinido.
+     * @param text El texto del botón.
+     * @return El botón con estilo.
+     */
     private JButton createStyledButton(String text) {
         JButton button = new JButton(text);
         button.setFocusPainted(false);
-        button.setBackground(new Color(0, 128, 0)); 
+        button.setBackground(new Color(0, 128, 0)); // Verde
         button.setForeground(Color.WHITE);
         button.setFont(new Font("Segoe UI", Font.BOLD, 14));
         return button;
     }
 
+    /**
+     * Agrega efectos de hover y presionado a un botón.
+     * @param button El JButton al que se le aplicarán los efectos.
+     */
     private void agregarEfectoHover(JButton button) {
         Color originalColor = button.getBackground();
+        Color hoverColor = new Color(255, 140, 0); // Naranja para hover
+        Color pressedColor = new Color(200, 100, 0); // Naranja más oscuro para presionado
+
         button.addMouseListener(new MouseAdapter() {
             public void mouseEntered(MouseEvent e) {
-                button.setBackground(new Color(255, 140, 0)); 
+                button.setBackground(hoverColor);
             }
 
             public void mouseExited(MouseEvent e) {
@@ -162,104 +498,47 @@ public class MenuManagement extends JFrame {
             }
 
             public void mousePressed(MouseEvent e) {
-                button.setBackground(new Color(200, 100, 0)); 
+                button.setBackground(pressedColor);
+            }
+            public void mouseReleased(MouseEvent e) { // Restaurar el color de hover después de presionar
+                if (button.getBounds().contains(e.getPoint())) {
+                    button.setBackground(hoverColor);
+                } else {
+                    button.setBackground(originalColor);
+                }
             }
         });
-    }
-
-    private void mostrarVentanaEditarProducto() {
-        JDialog editDialog = crearVentanaProducto("Editar Producto", true);
-        JButton save = (JButton) ((JPanel) editDialog.getContentPane().getComponent(0)).getComponent(12); 
-        save.addActionListener(e -> {
-            int confirm = JOptionPane.showConfirmDialog(this,
-                    "¿Deseas guardar los cambios del producto?",
-                    "Confirmación de edición",
-                    JOptionPane.YES_NO_OPTION,
-                    JOptionPane.QUESTION_MESSAGE);
-            if (confirm == JOptionPane.YES_OPTION) {
-                JOptionPane.showMessageDialog(this, "Producto editado exitosamente.");
-                editDialog.dispose();
-            }
-        });
-        editDialog.setVisible(true);
-    }
-
-    private void mostrarVentanaAgregarProducto() {
-        JDialog addDialog = crearVentanaProducto("Agregar Producto", false);
-        JButton save = (JButton) ((JPanel) addDialog.getContentPane().getComponent(0)).getComponent(12);
-        save.addActionListener(e -> {
-            int confirm = JOptionPane.showConfirmDialog(this,
-                    "¿Deseas agregar este nuevo producto?",
-                    "Confirmación de agregado",
-                    JOptionPane.YES_NO_OPTION,
-                    JOptionPane.QUESTION_MESSAGE);
-            if (confirm == JOptionPane.YES_OPTION) {
-                JOptionPane.showMessageDialog(this, "Producto agregado exitosamente.");
-                addDialog.dispose();
-            }
-        });
-        addDialog.setVisible(true);
     }
 
     /**
-     * Crea una ventana de diálogo para agregar o editar un producto.
-     * @param titulo El título de la ventana de diálogo.
-     * @param esEdicion Booleano que indica si la ventana es para edición (true) o para agregar (false).
-     * @return El JDialog configurado.
+     * Muestra un diálogo de confirmación para eliminar un producto seleccionado.
      */
-    private JDialog crearVentanaProducto(String titulo, boolean esEdicion) {
-        JDialog dialog = new JDialog(this, titulo, true);
-        dialog.setSize(500, 400); 
-        dialog.setLocationRelativeTo(this);
-
-        JPanel panel = new JPanel(new GridLayout(7, 2, 10, 10)); 
-        panel.setBorder(new EmptyBorder(20, 20, 20, 20));
-
-        JTextField nameField = new JTextField(esEdicion ? "Nombre Producto" : "");
-        JTextField ingredientsField = new JTextField(esEdicion ? "Ingredientes" : "");
-        JTextField netValueField = new JTextField(esEdicion ? "10000" : "");
-        JTextField taxValueField = new JTextField(esEdicion ? "1900" : "");
-        JTextField saleValueField = new JTextField(esEdicion ? "11900" : "");
-        JComboBox<String> categoryComboBox = new JComboBox<>(categorias);
-
-        panel.add(new JLabel("Nombre:"));
-        panel.add(nameField);
-        panel.add(new JLabel("Ingredientes:"));
-        panel.add(ingredientsField);
-        panel.add(new JLabel("Valor Neto:"));
-        panel.add(netValueField);
-        panel.add(new JLabel("IVA ($):"));
-        panel.add(taxValueField);
-        panel.add(new JLabel("Valor Venta:"));
-        panel.add(saleValueField);
-        panel.add(new JLabel("Categoría:")); 
-        panel.add(categoryComboBox); 
-
-        JButton saveButton = new JButton(esEdicion ? "Guardar cambios" : "Agregar producto");
-        JButton cancelButton = new JButton("Cancelar");
-        panel.add(saveButton);
-        panel.add(cancelButton);
-
-        saveButton.setBackground(new Color(0, 128, 0));
-        saveButton.setForeground(Color.WHITE);
-        cancelButton.setBackground(Color.GRAY);
-        cancelButton.setForeground(Color.WHITE);
-
-        cancelButton.addActionListener(e -> dialog.dispose());
-
-        dialog.add(panel);
-        return dialog;
-    }
-
     private void mostrarConfirmacionEliminar() {
-        int result = JOptionPane.showConfirmDialog(this,
-                "¿Estás seguro de que deseas eliminar este producto?",
-                "Confirmación",
-                JOptionPane.YES_NO_OPTION,
-                JOptionPane.WARNING_MESSAGE);
+        int selectedRow = table.getSelectedRow();
+        if (selectedRow == -1) {
+            JOptionPane.showMessageDialog(this, "Selecciona un producto para eliminar.", "Advertencia", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        int modelRow = table.convertRowIndexToModel(selectedRow);
 
-        if (result == JOptionPane.YES_OPTION) {
-            JOptionPane.showMessageDialog(this, "Producto eliminado.", "Info", JOptionPane.INFORMATION_MESSAGE);
+        // Obtener el product_id de la columna oculta (índice 0)
+        int productIdToDelete = (int) model.getValueAt(modelRow, 0);
+        String nombreSeleccionado = model.getValueAt(modelRow, 1).toString(); // El nombre ahora está en el índice 1
+
+        int confirm = JOptionPane.showConfirmDialog(this,
+                "¿Estás seguro de que deseas eliminar el producto '" + nombreSeleccionado + "'?",
+                "Confirmación",
+                JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+
+        if (confirm == JOptionPane.YES_OPTION) {
+            try {
+                productoController.eliminar(productIdToDelete); // Usar el ID de producto recuperado
+                cargarProductosEnTabla(); // Refrescar la tabla
+                JOptionPane.showMessageDialog(this, "Producto eliminado correctamente.", "Éxito", JOptionPane.INFORMATION_MESSAGE);
+            } catch (Exception e) {
+                JOptionPane.showMessageDialog(this, "Error al eliminar producto: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                e.printStackTrace();
+            }
         }
     }
 }

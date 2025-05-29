@@ -36,6 +36,18 @@ public class UsuarioDAO {
         return null;
     }
 
+    public Usuario obtenerPorNombre(String nombre) throws SQLException {
+        String sql = "SELECT * FROM usuarios WHERE LOWER(nombre) = LOWER(?)";
+        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
+            stmt.setString(1, nombre);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                return mapUsuario(rs);
+            }
+        }
+        return null;
+    }
+
     public List<Usuario> obtenerTodos() throws SQLException {
         List<Usuario> usuarios = new ArrayList<>();
         String sql = "SELECT * FROM usuarios";
@@ -77,4 +89,4 @@ public class UsuarioDAO {
         u.setContrasena(rs.getString("contrasena"));
         return u;
     }
-} 
+}

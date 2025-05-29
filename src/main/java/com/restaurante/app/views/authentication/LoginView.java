@@ -2,15 +2,18 @@ package main.java.com.restaurante.app.views.authentication;
 
 import com.formdev.flatlaf.FlatLightLaf;
 import main.java.com.restaurante.app.controllers.UsuarioController;
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.sql.SQLException;
+import java.util.regex.Pattern;
 
 public class LoginView extends BaseAuthView {
     private JTextField textFieldUsuario;
     private JPasswordField textFieldContrasena;
+    private JCheckBox showPasswordCheck;
 
     static {
         try {
@@ -18,7 +21,7 @@ public class LoginView extends BaseAuthView {
             UIManager.put("Button.arc", 15);
             UIManager.put("Component.arc", 20);
             UIManager.put("TextComponent.arc", 20);
-            UIManager.put("TextComponent.borderColor", new Color(200, 200, 200)); // gris claro
+            UIManager.put("TextComponent.borderColor", new Color(200, 200, 200));
             UIManager.put("Component.focusWidth", 1);
             UIManager.put("Component.innerFocusWidth", 1);
         } catch (Exception ex) {
@@ -81,11 +84,18 @@ public class LoginView extends BaseAuthView {
         textFieldContrasena.setBounds(30, 140, 300, 40);
         panel.add(textFieldContrasena);
 
+        showPasswordCheck = new JCheckBox("Mostrar contraseña");
+        showPasswordCheck.setBounds(30, 185, 300, 20);
+        showPasswordCheck.setBackground(new Color(255, 250, 205));
+        showPasswordCheck.setFont(new Font("Yu Gothic Medium", Font.PLAIN, 13));
+        showPasswordCheck.addActionListener(e -> textFieldContrasena.setEchoChar(showPasswordCheck.isSelected() ? (char) 0 : '●'));
+        panel.add(showPasswordCheck);
+
         JButton btnIngresar = new JButton("Ingresar");
         btnIngresar.setBackground(new Color(0, 128, 0));
         btnIngresar.setFont(new Font("Yu Gothic Medium", Font.BOLD, 16));
         btnIngresar.setForeground(Color.WHITE);
-        btnIngresar.setBounds(30, 200, 300, 45);
+        btnIngresar.setBounds(30, 210, 300, 45);
         btnIngresar.setFocusPainted(false);
         btnIngresar.addMouseListener(new MouseAdapter() {
             @Override
@@ -98,27 +108,34 @@ public class LoginView extends BaseAuthView {
                 btnIngresar.setBackground(new Color(0, 128, 0));
             }
         });
-        panel.add(btnIngresar);
-        
-        // Logica para validar las credenciales de Usuario
         btnIngresar.addActionListener(e -> {
             String correo = textFieldUsuario.getText();
             String contrasena = new String(textFieldContrasena.getPassword());
+
+            if (correo.isEmpty() || contrasena.isEmpty()) {
+                JOptionPane.showMessageDialog(frame, "Por favor completa ambos campos.", "Campos Vacíos", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+
+            if (!Pattern.matches("^[\\w-\\.+]+@([\\w-]+\\.)+[\\w-]{2,4}$", correo)) {
+                JOptionPane.showMessageDialog(frame, "Por favor ingresa un correo electrónico válido.", "Formato Inválido", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
 
             try {
                 UsuarioController controller = new UsuarioController();
                 controller.login(correo, contrasena, frame);
             } catch (SQLException ex) {
-                JOptionPane.showMessageDialog(frame, "Error al conectar con la base de datos:\n" + ex.getMessage());
+                JOptionPane.showMessageDialog(frame, "Error de conexión a base de datos: " + ex.getMessage());
                 ex.printStackTrace();
             }
         });
-
+        panel.add(btnIngresar);
 
         JLabel lblPromptLogin2 = new JLabel("¿Olvidaste tu contraseña?");
         lblPromptLogin2.setFont(new Font("Yu Gothic Medium", Font.PLAIN, 13));
         lblPromptLogin2.setForeground(new Color(0, 100, 200));
-        lblPromptLogin2.setBounds(30, 260, 300, 20);
+        lblPromptLogin2.setBounds(30, 270, 300, 20);
         lblPromptLogin2.setHorizontalAlignment(SwingConstants.CENTER);
         lblPromptLogin2.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         lblPromptLogin2.addMouseListener(new MouseAdapter() {

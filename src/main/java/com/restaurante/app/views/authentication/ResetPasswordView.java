@@ -7,6 +7,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.sql.SQLException;
+import java.util.regex.Pattern;
 
 public class ResetPasswordView extends BaseAuthView {
     private JTextField textFieldUsuario;
@@ -62,8 +63,14 @@ public class ResetPasswordView extends BaseAuthView {
         btnIngresar.setFocusPainted(false);
         btnIngresar.addActionListener(e -> {
             String correo = textFieldUsuario.getText();
+
             if (correo == null || correo.trim().isEmpty()) {
                 JOptionPane.showMessageDialog(frame, "Por favor ingresa un correo o nombre de usuario.");
+                return;
+            }
+
+            if (!isValidEmail(correo)) {
+                JOptionPane.showMessageDialog(frame, "Formato de correo inválido.");
                 return;
             }
 
@@ -117,5 +124,10 @@ public class ResetPasswordView extends BaseAuthView {
         SwingUtilities.invokeLater(() -> { 
             SwingUtilities.updateComponentTreeUI(panelFormLogin); 
         }); 
-    } 
+    }
+
+    private boolean isValidEmail(String email) {
+        String regex = "^[\\w-\\.+]+@([\\w-]+\\.)+[\\w-]{2,4}$";
+        return Pattern.matches(regex, email);
+    }
 } 
