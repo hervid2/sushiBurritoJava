@@ -1,19 +1,95 @@
 package main.java.com.restaurante.app.views.mesero;
- 
+
 import com.formdev.flatlaf.FlatLightLaf;
+import main.java.com.restaurante.app.controllers.PedidoController;
+import main.java.com.restaurante.app.models.DetallePedidoDTO; // Tu DTO
+import main.java.com.restaurante.app.database.ProductoDAO; // Importar el DAO de Producto
+import main.java.com.restaurante.app.models.Producto;     // Importar el modelo Producto
+import main.java.com.restaurante.app.models.Categoria;    // Importar el modelo Categoria
+import main.java.com.restaurante.app.models.Pedido;       // Importar el modelo Pedido
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.awt.event.ActionListener;
+import java.sql.SQLException;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.Map;
+import java.util.HashMap;
+import java.util.Set; // Para conjuntos, si es necesario para categorías
+import java.util.HashSet; // Para HashSet
 
 public class GenerarComandaView extends JFrame {
 
     private JTable resumenTable;
     private DefaultTableModel tableModel;
+    private int usuarioId;
+    private JComboBox<Producto> comboProducto;
+    private JComboBox<Categoria> comboCategoria;
+    private ProductoDAO productoDAO; // Instancia del DAO
+    private PedidoController pedidoController; // Instancia del controlador de pedidos
 
-    public GenerarComandaView() {
+    // Mapas para almacenar productos por categoría y categorías por ID
+    private Map<Integer, List<Producto>> productosPorCategoria;
+    private Map<Integer, Categoria> categoriasMap; // Para mapear categoria_id a objetos Categoria
+    private Map<Integer, Producto> productosMap; // Añadido para buscar productos por ID fácilmente
+
+    public GenerarComandaView(int usuarioId) {
+        this.usuarioId = usuarioId;
+        try {
+            this.productoDAO = new ProductoDAO(); // Inicializar el DAO de productos
+            this.pedidoController = new PedidoController(); // Inicializar el controlador de pedidos
+            loadProductosAndCategorias(); // Cargar los datos de la DB al iniciar la vista
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Error al conectar o cargar datos del menú desde la base de datos: " + e.getMessage(), "Error de DB", JOptionPane.ERROR_MESSAGE);
+            e.printStackTrace();
+            // Considera si quieres salir de la aplicación o deshabilitar funcionalidades si no hay conexión
+        }
         setupUI();
+        // Es una buena práctica cerrar los DAOs/Controladores cuando la vista se cierra
+        this.addWindowListener(new java.awt.event.WindowAdapter() {
+            @Override
+            public void windowClosing(java.awt.event.WindowEvent windowEvent) {
+                if (productoDAO != null) {
+                    productoDAO.close();
+                }
+                if (pedidoController != null) {
+                    pedidoController.closeDAOs(); // Asegúrate de tener este método en tu PedidoController
+                }
+            }
+        });
+    }
+
+    /**
+     * Carga todos los productos y categorías desde la base de datos
+     * y los organiza en mapas para facilitar su uso en la interfaz.
+     * @throws SQLException Si ocurre un error al acceder a la base de datos.
+     */
+    private void loadProductosAndCategorias() throws SQLException {
+        List<Producto> allProducts = productoDAO.obtenerTodosLosProductos();
+        List<Categoria> allCategories = productoDAO.obtenerTodasLasCategorias();
+
+        productosPorCategoria = new HashMap<>();
+        categoriasMap = new HashMap<>();
+        productosMap = new HashMap<>(); // Inicializar el nuevo mapa
+
+        // Poblar el mapa de categorías y preparar listas vacías para productos
+        for (Categoria cat : allCategories) {
+            categoriasMap.put(cat.getCategoriaId(), cat);
+            productosPorCategoria.put(cat.getCategoriaId(), new ArrayList<>());
+        }
+
+        // Asignar cada producto a su lista de categoría correspondiente y al mapa de productos
+        for (Producto prod : allProducts) {
+            productosMap.put(prod.getId(), prod); // Añadir al nuevo mapa
+            if (productosPorCategoria.containsKey(prod.getCategoriaId())) {
+                productosPorCategoria.get(prod.getCategoriaId()).add(prod);
+            } else {
+                System.err.println("Producto '" + prod.getNombre() + "' tiene una categoriaId (" + prod.getCategoriaId() + ") que no existe.");
+            }
+        }
     }
 
     private void setupUI() {
@@ -29,7 +105,7 @@ public class GenerarComandaView extends JFrame {
         setTitle("Generar Comanda - Sushi Burrito");
         setSize(1000, 750);
         setLocationRelativeTo(null);
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 
         JPanel mainPanel = new JPanel(new BorderLayout());
         mainPanel.setBorder(new EmptyBorder(20, 20, 20, 20));
@@ -63,8 +139,19 @@ public class GenerarComandaView extends JFrame {
         centerPanel.add(Box.createVerticalStrut(20));
 
         // Tabla de resumen con nueva columna "Notas"
-        tableModel = new DefaultTableModel(new Object[]{"Producto", "Categoría", "Cantidad", "Notas"}, 0);
+        tableModel = new DefaultTableModel(new Object[]{"Producto", "Categoría", "Cantidad", "Notas", "Producto ID"}, 0) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
+        };
         resumenTable = new JTable(tableModel);
+        // Ocultar la columna de Producto ID
+        resumenTable.getColumnModel().getColumn(4).setMinWidth(0);
+        resumenTable.getColumnModel().getColumn(4).setMaxWidth(0);
+        resumenTable.getColumnModel().getColumn(4).setWidth(0);
+        resumenTable.getColumnModel().getColumn(4).setPreferredWidth(0);
+
         JScrollPane scrollResumen = new JScrollPane(resumenTable);
         scrollResumen.setPreferredSize(new Dimension(900, 200));
         scrollResumen.setAlignmentX(Component.CENTER_ALIGNMENT);
@@ -76,18 +163,34 @@ public class GenerarComandaView extends JFrame {
         inputPanel.setOpaque(false);
         inputPanel.setMaximumSize(new Dimension(700, 150));
 
+        JLabel lblCategoria = new JLabel("Categoría:");
+        comboCategoria = new JComboBox<>();
+        for (Categoria cat : categoriasMap.values()) {
+            comboCategoria.addItem(cat);
+        }
+        comboCategoria.setFont(new Font("Segoe UI", Font.PLAIN, 16));
+
         JLabel lblProducto = new JLabel("Producto:");
-        JComboBox<String> comboProducto = new JComboBox<>(new String[]{
-                "Sushi Roll", "Tempura", "Ramen", "Yakimeshi", "Té Verde",
-                "Cerveza", "Agua", "Helado", "Brownie", "Guacamole", "Gyozas"
-        });
+        comboProducto = new JComboBox<>();
         comboProducto.setFont(new Font("Segoe UI", Font.PLAIN, 16));
 
-        JLabel lblCategoria = new JLabel("Categoría:");
-        JComboBox<String> comboCategoria = new JComboBox<>(new String[]{
-                "Infantil", "Bebidas", "Postres", "Entradas", "Platos Fuertes","Acompañamientos"
+        comboCategoria.addActionListener(e -> {
+            Categoria selectedCategory = (Categoria) comboCategoria.getSelectedItem();
+            comboProducto.removeAllItems();
+            if (selectedCategory != null) {
+                List<Producto> productos = productosPorCategoria.get(selectedCategory.getCategoriaId());
+                if (productos != null) {
+                    for (Producto p : productos) {
+                        comboProducto.addItem(p);
+                    }
+                }
+            }
         });
-        comboCategoria.setFont(new Font("Segoe UI", Font.PLAIN, 16));
+
+        if (comboCategoria.getItemCount() > 0) {
+            comboCategoria.setSelectedIndex(0);
+        }
+
 
         JLabel lblCantidad = new JLabel("Cantidad:");
         JSpinner spinnerCantidad = new JSpinner(new SpinnerNumberModel(1, 1, 20, 1));
@@ -97,10 +200,10 @@ public class GenerarComandaView extends JFrame {
         JTextField txtNotas = new JTextField();
         txtNotas.setFont(new Font("Segoe UI", Font.PLAIN, 16));
 
-        inputPanel.add(lblProducto);
-        inputPanel.add(comboProducto);
         inputPanel.add(lblCategoria);
         inputPanel.add(comboCategoria);
+        inputPanel.add(lblProducto);
+        inputPanel.add(comboProducto);
         inputPanel.add(lblCantidad);
         inputPanel.add(spinnerCantidad);
         inputPanel.add(lblNotas);
@@ -137,32 +240,95 @@ public class GenerarComandaView extends JFrame {
 
         // Acción Agregar
         btnAgregar.addActionListener(e -> {
-            String producto = (String) comboProducto.getSelectedItem();
-            String categoria = (String) comboCategoria.getSelectedItem();
-            int cantidad = (Integer) spinnerCantidad.getValue();
-            String notas = txtNotas.getText();
-            String mesa = (String) comboMesa.getSelectedItem();
+            Producto selectedProducto = (Producto) comboProducto.getSelectedItem();
+            if (selectedProducto == null) {
+                JOptionPane.showMessageDialog(this, "Por favor, selecciona un producto.", "Advertencia", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            Categoria selectedCategoria = (Categoria) comboCategoria.getSelectedItem();
+            if (selectedCategoria == null) {
+                 JOptionPane.showMessageDialog(this, "No hay categoría seleccionada. Revisa la carga de datos.", "Error", JOptionPane.ERROR_MESSAGE);
+                 return;
+            }
 
-            tableModel.addRow(new Object[]{mesa + " - " + producto, categoria, cantidad, notas});
-            txtNotas.setText(""); 
+            int cantidad = (Integer) spinnerCantidad.getValue();
+            String notas = txtNotas.getText().trim();
+
+            tableModel.addRow(new Object[]{selectedProducto.getNombre(), selectedCategoria.getNombre(), cantidad, notas, selectedProducto.getId()});
+            txtNotas.setText("");
+            spinnerCantidad.setValue(1);
         });
 
-        // Acción Confirmar
+        // Acción Confirmar - ¡Modificada para pasar los resúmenes!
         btnConfirmar.addActionListener(e -> {
+            if (tableModel.getRowCount() == 0) {
+                JOptionPane.showMessageDialog(this, "La comanda no contiene productos.", "Aviso", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+
             int confirm = JOptionPane.showConfirmDialog(
-                    this,
-                    "¿Estás seguro de que deseas generar esta comanda?",
-                    "Confirmación",
-                    JOptionPane.YES_NO_OPTION
+                this,
+                "¿Estás seguro de que deseas generar esta comanda?",
+                "Confirmación",
+                JOptionPane.YES_NO_OPTION
             );
 
             if (confirm == JOptionPane.YES_OPTION) {
-                JOptionPane.showMessageDialog(this, "¡La comanda fue generada con éxito!");
-                tableModel.setRowCount(0);
+                try {
+                    List<DetallePedidoDTO> detalles = new ArrayList<>();
+                    StringBuilder productosResumen = new StringBuilder();
+                    Set<String> categoriasUnicas = new HashSet<>(); // Usamos un Set para asegurar categorías únicas
+
+                    String mesaSeleccionada = (String) comboMesa.getSelectedItem();
+                    int numeroMesa = Integer.parseInt(mesaSeleccionada);
+
+                    for (int i = 0; i < tableModel.getRowCount(); i++) {
+                        int productoId = (int) tableModel.getValueAt(i, 4);
+                        int cantidad = (int) tableModel.getValueAt(i, 2);
+                        String notas = (String) tableModel.getValueAt(i, 3);
+                        String nombreProducto = (String) tableModel.getValueAt(i, 0); // Nombre del producto desde la tabla
+                        String nombreCategoria = (String) tableModel.getValueAt(i, 1); // Nombre de la categoría desde la tabla
+
+                        DetallePedidoDTO detalle = new DetallePedidoDTO(productoId, cantidad, notas);
+                        detalles.add(detalle);
+
+                        // Construir el resumen de productos
+                        if (productosResumen.length() > 0) {
+                            productosResumen.append(", ");
+                        }
+                        productosResumen.append(cantidad).append(" ").append(nombreProducto);
+
+                        // Añadir categoría al set para mantenerlas únicas
+                        categoriasUnicas.add(nombreCategoria);
+                    }
+
+                    // Convertir el Set de categorías a una cadena separada por comas
+                    String categoriasResumenStr = String.join(", ", categoriasUnicas);
+
+                    // Crear el objeto Pedido
+                    Pedido nuevoPedido = new Pedido();
+                    nuevoPedido.setUsuarioId(usuarioId);
+                    nuevoPedido.setMesa(numeroMesa);
+                    nuevoPedido.setEstado("pendiente"); // Estado inicial
+
+                    // Llama al controlador con todos los argumentos necesarios
+                    // Asumiendo que crearPedido es el método del controlador que envuelve el DAO
+                    pedidoController.crearPedido(nuevoPedido, detalles, productosResumen.toString(), categoriasResumenStr);
+
+                    JOptionPane.showMessageDialog(this, "¡La comanda fue generada con éxito!", "Comanda Creada", JOptionPane.INFORMATION_MESSAGE);
+                    tableModel.setRowCount(0); // Limpiar la tabla de resumen
+                } catch (SQLException ex) {
+                    JOptionPane.showMessageDialog(this, "Error de conexión a base de datos al crear la comanda: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                    ex.printStackTrace();
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(this, "Error inesperado al crear la comanda: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                    ex.printStackTrace();
+                }
             }
         });
 
-        // Acción Eliminar 
+
+        // Acción Eliminar
         btnEliminar.addActionListener(e -> {
             int selectedRow = resumenTable.getSelectedRow();
             if (selectedRow != -1) {
@@ -172,7 +338,7 @@ public class GenerarComandaView extends JFrame {
             }
         });
 
-        // Botón volver 
+        // Botón volver
         JButton btnVolver = new JButton("← Volver al Panel del Mesero");
         btnVolver.setBackground(new Color(255, 140, 0));
         btnVolver.setForeground(Color.WHITE);
@@ -181,7 +347,7 @@ public class GenerarComandaView extends JFrame {
 
         btnVolver.addActionListener(e -> {
             this.dispose();
-            new WaiterPanelView().setVisible(true);
+            new WaiterPanelView(usuarioId).setVisible(true);
         });
 
         JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
@@ -191,6 +357,3 @@ public class GenerarComandaView extends JFrame {
         mainPanel.add(bottomPanel, BorderLayout.SOUTH);
     }
 }
-
-
-

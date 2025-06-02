@@ -1,6 +1,9 @@
 package main.java.com.restaurante.app.views.mesero;
 
 import com.formdev.flatlaf.FlatLightLaf;
+
+import main.java.com.restaurante.app.views.authentication.LoginView;
+
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
@@ -10,6 +13,8 @@ import java.awt.geom.RoundRectangle2D;
 import java.util.Objects;
 
 public class WaiterPanelView extends JFrame {
+	
+	private final int usuarioId;
 
     private static final String[] IMAGE_PATHS = {
             "/main/resources/images/ui/orden.png",
@@ -20,7 +25,8 @@ public class WaiterPanelView extends JFrame {
             "/main/resources/images/ui/PedidosEnProgreso.png"
     };
 
-    public WaiterPanelView() {
+    public WaiterPanelView(int usuarioId) {
+        this.usuarioId = usuarioId;
         setupUI();
     }
 
@@ -64,7 +70,10 @@ public class WaiterPanelView extends JFrame {
         logoutButton.setPreferredSize(new Dimension(150, 40));
         logoutButton.setFont(new Font("Segoe UI", Font.BOLD, 14));
 
-        logoutButton.addActionListener(e -> this.dispose());
+        logoutButton.addActionListener(e -> {
+        	this.dispose();// Cierra la ventana actual de WaiterPanelView
+            new LoginView().setVisible(true); // Abre una nueva ventana de Login
+        	});
 
         logoutButton.addMouseListener(new MouseAdapter() {
             public void mouseEntered(MouseEvent e) {
@@ -187,42 +196,42 @@ public class WaiterPanelView extends JFrame {
     private void generateOrder() {
         EventQueue.invokeLater(() -> {
             this.dispose();
-            new GenerarComandaView().setVisible(true);
+            new GenerarComandaView(usuarioId).setVisible(true);
         });
     }
 
     private void generateInvoice() {
         EventQueue.invokeLater(() -> {
             this.dispose();
-            new GenerarFacturaView().setVisible(true);
+            new GenerarFacturaView(usuarioId).setVisible(true);
         });
     }
 
     private void editOrder() {
         EventQueue.invokeLater(() -> {
             this.dispose();
-            new EditarPedidoView().setVisible(true);
+            new EditarPedidoView(usuarioId).setVisible(true);
         });
     }
 
     private void closeOrder() {
         EventQueue.invokeLater(() -> {
             this.dispose();
-            new CerrarPedidosView().setVisible(true);
+            new CerrarPedidosView(usuarioId).setVisible(true);
         });
     }
 
     private void cancelOrder() {
         EventQueue.invokeLater(() -> {
             this.dispose();
-            new CancelarPedidoView().setVisible(true);
+            new CancelarPedidoView(usuarioId).setVisible(true);
         });
     }
 
     private void viewActiveOrders() {
         EventQueue.invokeLater(() -> {
             this.dispose();
-            new VerPedidosEnProgresoView().setVisible(true);
+            new VerPedidosEnProgresoView(usuarioId).setVisible(true);
         });
     }
 

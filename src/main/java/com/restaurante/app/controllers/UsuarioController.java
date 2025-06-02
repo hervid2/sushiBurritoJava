@@ -4,6 +4,7 @@ import main.java.com.restaurante.app.database.UsuarioDAO;
 import main.java.com.restaurante.app.models.Usuario;
 import main.java.com.restaurante.app.views.admin.AdminPanelView;
 import main.java.com.restaurante.app.views.cocina.CocinaPanelView;
+import main.java.com.restaurante.app.views.mesero.GenerarComandaView;
 import main.java.com.restaurante.app.views.mesero.WaiterPanelView;
 
 import javax.swing.*;
@@ -43,7 +44,7 @@ public class UsuarioController {
                 new AdminPanelView().setVisible(true);
                 break;
             case "mesero":
-                new WaiterPanelView().setVisible(true);
+            	new WaiterPanelView(usuario.getId()).setVisible(true);
                 break;
             case "cocinero":
                 new CocinaPanelView().setVisible(true);

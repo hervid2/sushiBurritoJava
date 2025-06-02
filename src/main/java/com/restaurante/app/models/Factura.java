@@ -1,3 +1,4 @@
+
 package main.java.com.restaurante.app.models;
 
 import java.time.LocalDateTime;
@@ -7,17 +8,19 @@ public class Factura {
     private int pedidoId;
     private double subtotal;
     private double impuestoTotal;
+    private double propina; 
     private double total;
     private LocalDateTime fechaFactura;
 
     public Factura() {
     }
 
-    public Factura(int id, int pedidoId, double subtotal, double impuestoTotal, double total, LocalDateTime fechaFactura) {
+    public Factura(int id, int pedidoId, double subtotal, double impuestoTotal, double propina, double total, LocalDateTime fechaFactura) {
         this.id = id;
         this.pedidoId = pedidoId;
         this.subtotal = subtotal;
         this.impuestoTotal = impuestoTotal;
+        this.propina = propina; 
         this.total = total;
         this.fechaFactura = fechaFactura;
     }
@@ -52,6 +55,15 @@ public class Factura {
 
     public void setImpuestoTotal(double impuestoTotal) {
         this.impuestoTotal = impuestoTotal;
+    }
+
+    // Getter y Setter para propina
+    public double getPropina() {
+        return propina;
+    }
+
+    public void setPropina(double propina) {
+        this.propina = propina;
     }
 
     public double getTotal() {

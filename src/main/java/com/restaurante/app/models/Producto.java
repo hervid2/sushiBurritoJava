@@ -77,4 +77,9 @@ public class Producto {
     public void setCategoriaId(int categoriaId) {
         this.categoriaId = categoriaId;
     }
+    
+    @Override
+    public String toString() {
+        return nombre; // This ensures the JComboBox displays the product's name
+    }  
 }

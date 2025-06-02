@@ -2,6 +2,8 @@ package main.java.com.restaurante.app.views.admin;
 
 import com.formdev.flatlaf.FlatLightLaf;
 import main.java.com.restaurante.app.views.admin.UsersManagement;
+import main.java.com.restaurante.app.views.authentication.LoginView;
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
@@ -65,8 +67,8 @@ public class AdminPanelView extends JFrame {
         
         // Acción para el botón de cerrar sesión
         logoutButton.addActionListener(e -> {
-            this.dispose();
-            // Aquí podrías abrir la ventana de login si es necesario
+            this.dispose(); // Cierra la ventana actual de AdminPanelView
+            new LoginView().setVisible(true); // Abre una nueva ventana de Login
         });
         
         topPanel.add(logoutButton);

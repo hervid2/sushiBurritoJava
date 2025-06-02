@@ -1,19 +1,68 @@
 package main.java.com.restaurante.app.views.mesero;
 
 import com.formdev.flatlaf.FlatLightLaf;
+import main.java.com.restaurante.app.database.PedidoDAO;
+import main.java.com.restaurante.app.models.Pedido;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+import java.sql.SQLException;
+import java.util.List;
 
 public class CerrarPedidosView extends JFrame {
 
     private JTable pedidosTable;
     private DefaultTableModel pedidosModel;
+    private PedidoDAO pedidoDAO;
+    private int usuarioId; // Para volver al panel del mesero con el ID correcto
 
-    public CerrarPedidosView() {
+    public CerrarPedidosView(int usuarioId) { // Añadir usuarioId al constructor
+        this.usuarioId = usuarioId;
+        try {
+            pedidoDAO = new PedidoDAO();
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Error al conectar con la base de datos: " + e.getMessage(), "Error de DB", JOptionPane.ERROR_MESSAGE);
+            e.printStackTrace();
+        }
         setupUI();
+        loadPedidosParaCerrar(); // Cargar pedidos al inicio
+
+        // Asegurarse de cerrar la conexión al cerrar la ventana
+        this.addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent windowEvent) {
+                if (pedidoDAO != null) {
+                    pedidoDAO.close();
+                }
+            }
+        });
+    }
+
+    private void loadPedidosParaCerrar() {
+        pedidosModel.setRowCount(0); // Limpiar tabla
+        try {
+            // Obtener pedidos que pueden ser cerrados/pagados (ej. Preparando o Entregado)
+            List<Pedido> pedidosPreparando = pedidoDAO.obtenerPedidosPorEstado("preparando");
+            List<Pedido> pedidosEntregados = pedidoDAO.obtenerPedidosPorEstado("entregado");
+
+            // Combinar y mostrar en la tabla
+            for (Pedido p : pedidosPreparando) {
+                String productosResumen = pedidoDAO.obtenerProductosResumenPorPedido(p.getPedidoId());
+                pedidosModel.addRow(new Object[]{p.getPedidoId(), p.getMesa(), productosResumen, p.getEstado()});
+            }
+            for (Pedido p : pedidosEntregados) {
+                String productosResumen = pedidoDAO.obtenerProductosResumenPorPedido(p.getPedidoId());
+                pedidosModel.addRow(new Object[]{p.getPedidoId(), p.getMesa(), productosResumen, p.getEstado()});
+            }
+
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Error al cargar pedidos para cerrar: " + e.getMessage(), "Error de DB", JOptionPane.ERROR_MESSAGE);
+            e.printStackTrace();
+        }
     }
 
     private void setupUI() {
@@ -29,7 +78,7 @@ public class CerrarPedidosView extends JFrame {
         setTitle("Cerrar Pedidos - Sushi Burrito");
         setSize(900, 700);
         setLocationRelativeTo(null);
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE); // Usar DISPOSE_ON_CLOSE
 
         JPanel mainPanel = new JPanel(new BorderLayout());
         mainPanel.setBorder(new EmptyBorder(20, 20, 20, 20));
@@ -42,8 +91,12 @@ public class CerrarPedidosView extends JFrame {
         mainPanel.add(titleLabel, BorderLayout.NORTH);
 
         // Tabla de pedidos activos
-        String[] columnas = {"ID Pedido", "Mesa", "Productos", "Estado"};
-        pedidosModel = new DefaultTableModel(columnas, 0);
+        pedidosModel = new DefaultTableModel(new String[]{"ID Pedido", "Mesa", "Productos", "Estado"}, 0) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false; // Hacer la tabla no editable
+            }
+        };
         pedidosTable = new JTable(pedidosModel);
         JScrollPane scrollPane = new JScrollPane(pedidosTable);
         scrollPane.setPreferredSize(new Dimension(850, 300));
@@ -73,23 +126,51 @@ public class CerrarPedidosView extends JFrame {
         btnMarcarPagado.addActionListener(e -> {
             int selectedRow = pedidosTable.getSelectedRow();
             if (selectedRow != -1) {
-                String estado = (String) pedidosModel.getValueAt(selectedRow, 3);
-                if (!estado.equalsIgnoreCase("Pagado")) {
-                    pedidosModel.setValueAt("Pagado", selectedRow, 3);
-                    JOptionPane.showMessageDialog(this, "Pedido marcado como pagado y archivado.");
-                    pedidosModel.removeRow(selectedRow); // Simula archivado
+                int pedidoId = (int) pedidosModel.getValueAt(selectedRow, 0);
+                String estadoActual = (String) pedidosModel.getValueAt(selectedRow, 3);
+
+                if (estadoActual.equalsIgnoreCase("entregado") || estadoActual.equalsIgnoreCase("preparando")) { // Solo se puede pagar un pedido entregado o en preparación
+                    int confirm = JOptionPane.showConfirmDialog(this, "¿Confirmar pago para Pedido #" + pedidoId + "?", "Confirmar Pago", JOptionPane.YES_NO_OPTION);
+                    if (confirm == JOptionPane.YES_OPTION) {
+                        try {
+                            pedidoDAO.actualizarEstadoPedido(pedidoId, "pagado");
+                            JOptionPane.showMessageDialog(this, "Pedido #" + pedidoId + " marcado como pagado.");
+                            loadPedidosParaCerrar(); // Recargar la tabla
+                        } catch (SQLException ex) {
+                            JOptionPane.showMessageDialog(this, "Error al marcar pedido como pagado en la DB: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                            ex.printStackTrace();
+                        }
+                    }
+                } else {
+                     JOptionPane.showMessageDialog(this, "No se puede marcar como pagado un pedido que está " + estadoActual + ".");
                 }
             } else {
                 JOptionPane.showMessageDialog(this, "Selecciona un pedido para marcarlo como pagado.");
             }
         });
 
-        // Acción: Marcar como Entregado (pero no se elimina)
+        // Acción: Marcar como Entregado (pero no se elimina de la tabla si no está pagado)
         btnMarcarEntregado.addActionListener(e -> {
             int selectedRow = pedidosTable.getSelectedRow();
             if (selectedRow != -1) {
-                pedidosModel.setValueAt("Entregado", selectedRow, 3);
-                JOptionPane.showMessageDialog(this, "Pedido marcado como entregado.");
+                int pedidoId = (int) pedidosModel.getValueAt(selectedRow, 0);
+                String estadoActual = (String) pedidosModel.getValueAt(selectedRow, 3);
+
+                if (estadoActual.equalsIgnoreCase("preparando") || estadoActual.equalsIgnoreCase("pendiente")) { // Solo se puede marcar como entregado si está en preparación o pendiente
+                    int confirm = JOptionPane.showConfirmDialog(this, "¿Marcar Pedido #" + pedidoId + " como entregado?", "Confirmar Entrega", JOptionPane.YES_NO_OPTION);
+                    if (confirm == JOptionPane.YES_OPTION) {
+                        try {
+                            pedidoDAO.actualizarEstadoPedido(pedidoId, "entregado");
+                            JOptionPane.showMessageDialog(this, "Pedido #" + pedidoId + " marcado como entregado.");
+                            loadPedidosParaCerrar(); // Recargar la tabla
+                        } catch (SQLException ex) {
+                            JOptionPane.showMessageDialog(this, "Error al marcar pedido como entregado en la DB: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                            ex.printStackTrace();
+                        }
+                    }
+                } else {
+                    JOptionPane.showMessageDialog(this, "No se puede marcar como entregado un pedido que ya está " + estadoActual + ".");
+                }
             } else {
                 JOptionPane.showMessageDialog(this, "Selecciona un pedido para marcarlo como entregado.");
             }
@@ -104,18 +185,14 @@ public class CerrarPedidosView extends JFrame {
 
         btnVolver.addActionListener(e -> {
             this.dispose();
-            new WaiterPanelView().setVisible(true);
+            new WaiterPanelView(usuarioId).setVisible(true); // Pasa el usuarioId
         });
 
         JPanel volverPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         volverPanel.setOpaque(false);
         volverPanel.setBorder(new EmptyBorder(20, 0, 0, 0));
         volverPanel.add(btnVolver);
-        mainPanel.add(volverPanel, BorderLayout.NORTH);
-
-        // Datos de prueba
-        pedidosModel.addRow(new Object[]{"001", "Mesa 5", "2 Sushi Roll, 1 Té Verde", "Pendiente"});
-        pedidosModel.addRow(new Object[]{"002", "Mesa 3", "1 Ramen, 1 Gyozas", "Pendiente"});
+        mainPanel.add(volverPanel, BorderLayout.NORTH); // Añadir al norte
     }
 }
 

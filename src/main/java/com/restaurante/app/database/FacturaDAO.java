@@ -1,3 +1,4 @@
+
 package main.java.com.restaurante.app.database;
 
 import main.java.com.restaurante.app.models.Factura;
@@ -15,14 +16,29 @@ public class FacturaDAO {
         this.connection = Conexion.getConnection();
     }
 
+    public void close() {
+        try {
+            if (connection != null && !connection.isClosed()) {
+                connection.close();
+                System.out.println("Conexión de FacturaDAO cerrada.");
+            }
+        } catch (SQLException e) {
+            System.err.println("Error al cerrar la conexión de FacturaDAO: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
     public void insertarFactura(Factura factura) throws SQLException {
-        String sql = "INSERT INTO facturas (pedido_id, subtotal, impuesto_total, total, fecha_factura) VALUES (?, ?, ?, ?, ?)";
+        // Asegúrate de que los nombres de columna coincidan exactamente con tu tabla.
+        // Asumo 'propina' como nombre de columna.
+        String sql = "INSERT INTO facturas (pedido_id, subtotal, impuesto_total, propina, total, fecha_factura) VALUES (?, ?, ?, ?, ?, ?)";
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setInt(1, factura.getPedidoId());
             stmt.setDouble(2, factura.getSubtotal());
             stmt.setDouble(3, factura.getImpuestoTotal());
-            stmt.setDouble(4, factura.getTotal());
-            stmt.setTimestamp(5, Timestamp.valueOf(factura.getFechaFactura()));
+            stmt.setDouble(4, factura.getPropina()); // ¡Ahora insertamos la propina!
+            stmt.setDouble(5, factura.getTotal());
+            stmt.setTimestamp(6, Timestamp.valueOf(factura.getFechaFactura()));
             stmt.executeUpdate();
         }
     }
@@ -53,7 +69,11 @@ public class FacturaDAO {
 
     public List<Factura> obtenerFacturasConDetalles() throws SQLException {
         List<Factura> facturas = new ArrayList<>();
-        String sql = "SELECT f.*, p.usuario_id, p.estado, p.mesa FROM facturas f JOIN pedidos p ON f.pedido_id = p.pedido_id";
+        // Asumiendo que 'usuario_id', 'estado', 'mesa' se necesitan para la vista de facturas
+        // Si no se usan directamente en el modelo Factura, esta query es más para un reporte.
+        // Si solo necesitas el pedido_id para el join, una query más simple es suficiente.
+        // Aquí no estamos mapeando usuario_id, estado, mesa al modelo Factura directamente.
+        String sql = "SELECT f.* FROM facturas f JOIN pedidos p ON f.pedido_id = p.pedido_id"; // Eliminé las columnas de p si no se mapean
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             ResultSet rs = stmt.executeQuery();
             while (rs.next()) {
@@ -124,9 +144,10 @@ public class FacturaDAO {
         f.setPedidoId(rs.getInt("pedido_id"));
         f.setSubtotal(rs.getDouble("subtotal"));
         f.setImpuestoTotal(rs.getDouble("impuesto_total"));
+        f.setPropina(rs.getDouble("propina")); // ¡Ahora leemos la propina!
         f.setTotal(rs.getDouble("total"));
         f.setFechaFactura(rs.getTimestamp("fecha_factura").toLocalDateTime());
         return f;
     }
-} 
+}
 

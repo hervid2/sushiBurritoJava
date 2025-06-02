@@ -1,41 +1,24 @@
 package main.java.com.restaurante.app.models;
 
-
-public class DetallePedido {
-    private int detalleId; 
-    private int pedidoId;
-    private int productoId;
+public class DetallePedidoDTO {
+    private int productoId; // Cambiado de String producto a int productoId
+    // private String categoria; // Esta línea ya no es necesaria si solo usas el ID del producto
     private int cantidad;
     private String notas;
 
-    public DetallePedido() {
+    // Constructor vacío (si lo necesitas)
+    public DetallePedidoDTO() {
     }
 
-    public DetallePedido(int detalleId, int pedidoId, int productoId, int cantidad, String notas) {
-        this.detalleId = detalleId;
-        this.pedidoId = pedidoId;
+    // Este es el constructor que GenerarComandaView espera y necesita
+    public DetallePedidoDTO(int productoId, int cantidad, String notas) {
         this.productoId = productoId;
         this.cantidad = cantidad;
         this.notas = notas;
     }
 
-    // --- Getters y Setters ---
 
-    public int getDetalleId() {
-        return detalleId;
-    }
-
-    public void setDetalleId(int detalleId) { 
-        this.detalleId = detalleId;
-    }
-
-    public int getPedidoId() {
-        return pedidoId;
-    }
-
-    public void setPedidoId(int pedidoId) {
-        this.pedidoId = pedidoId;
-    }
+    // --- Getters y Setters  ---
 
     public int getProductoId() {
         return productoId;
@@ -44,6 +27,7 @@ public class DetallePedido {
     public void setProductoId(int productoId) {
         this.productoId = productoId;
     }
+
 
     public int getCantidad() {
         return cantidad;

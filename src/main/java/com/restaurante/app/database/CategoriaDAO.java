@@ -1,4 +1,4 @@
-package main.java.com.restaurante.app.models;
+package main.java.com.restaurante.app.database;
 
 import java.sql.*;
 import java.util.ArrayList;
