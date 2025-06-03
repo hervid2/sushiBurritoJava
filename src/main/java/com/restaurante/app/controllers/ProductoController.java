@@ -1,7 +1,7 @@
 package main.java.com.restaurante.app.controllers;
 
 import main.java.com.restaurante.app.database.ProductoDAO;
-import main.java.com.restaurante.app.models.CategoriaDAO;
+import main.java.com.restaurante.app.database.CategoriaDAO;
 import main.java.com.restaurante.app.models.Producto;
 
 import java.sql.SQLException;

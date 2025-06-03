@@ -67,23 +67,21 @@ public class SetNewPasswordView extends BaseAuthView {
         btnReestablecerContrasena.setForeground(Color.WHITE);
         btnReestablecerContrasena.setBounds(24, 211, 316, 45);
         btnReestablecerContrasena.setFocusPainted(false);
+        
         btnReestablecerContrasena.addActionListener(e -> {
             String nueva = textFieldNewPassword.getText();
             String confirmar = textFieldNewPasswordConfirm.getText();
-
             if (nueva.isEmpty() || confirmar.isEmpty()) {
                 JOptionPane.showMessageDialog(frame, "Por favor completa ambos campos.");
                 return;
             }
-
             if (!nueva.equals(confirmar)) {
                 JOptionPane.showMessageDialog(frame, "Las contraseñas no coinciden.");
                 return;
             }
-
             try {
                 UsuarioController controller = new UsuarioController();
-                if (controller.actualizarContrasena(correo, nueva)) {
+                if (controller.reestablecerContrasena(correo, nueva)) { 
                     JOptionPane.showMessageDialog(frame, "Contraseña actualizada correctamente.");
                 } else {
                     JOptionPane.showMessageDialog(frame, "No se pudo actualizar la contraseña. Verifica el correo.");

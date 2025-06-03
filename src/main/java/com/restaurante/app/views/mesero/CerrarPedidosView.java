@@ -51,11 +51,11 @@ public class CerrarPedidosView extends JFrame {
 
             // Combinar y mostrar en la tabla
             for (Pedido p : pedidosPreparando) {
-                String productosResumen = pedidoDAO.obtenerProductosResumenPorPedido(p.getPedidoId());
+            	String productosResumen = p.getProductosResumen();
                 pedidosModel.addRow(new Object[]{p.getPedidoId(), p.getMesa(), productosResumen, p.getEstado()});
             }
             for (Pedido p : pedidosEntregados) {
-                String productosResumen = pedidoDAO.obtenerProductosResumenPorPedido(p.getPedidoId());
+            	String productosResumen = p.getProductosResumen();
                 pedidosModel.addRow(new Object[]{p.getPedidoId(), p.getMesa(), productosResumen, p.getEstado()});
             }
 

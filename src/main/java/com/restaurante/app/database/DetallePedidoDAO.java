@@ -48,7 +48,7 @@ public class DetallePedidoDAO {
 
     private DetallePedido mapDetalle(ResultSet rs) throws SQLException {
         DetallePedido d = new DetallePedido();
-        d.setId(rs.getInt("detalle_id"));
+        d.setDetalleId(rs.getInt("detalle_id")); 
         d.setPedidoId(rs.getInt("pedido_id"));
         d.setProductoId(rs.getInt("producto_id"));
         d.setCantidad(rs.getInt("cantidad"));

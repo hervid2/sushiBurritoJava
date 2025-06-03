@@ -35,8 +35,22 @@ public class PedidoController {
         }
     }
 
+    /**
+     * Crea un nuevo pedido en la base de datos junto con sus detalles.
+     * Ahora recibe los resúmenes de productos y categorías para guardarlos directamente en el pedido.
+     *
+     * @param pedido                  Objeto Pedido con los datos principales (usuarioId, mesa).
+     * Nota: El ID del pedido se generará en el DAO.
+     * @param detallesPedidoDTO       Lista de DTOs de detalles del pedido desde la vista.
+     * @param productosResumen        Cadena de texto con el resumen de productos (ej. "2 Sushi Roll, 1 Ramen").
+     * @param categoriasResumen       Cadena de texto con el resumen de categorías (ej. "Sushi, Platos Fuertes").
+     * @throws SQLException Si ocurre un error de base de datos.
+     */
     public void crearPedido(Pedido pedido, List<DetallePedidoDTO> detallesPedidoDTO, String productosResumen, String categoriasResumen) throws SQLException {
+        // Establecer el estado inicial del pedido. ¡Esto es CRUCIAL para que aparezca en CocinaPanelView!
         pedido.setEstado("pendiente"); // Por defecto, los nuevos pedidos son "pendientes"
+
+        // Convertir la lista de DetallePedidoDTO a DetallePedido para el DAO
         List<DetallePedido> detallesParaBD = new ArrayList<>();
         for (DetallePedidoDTO dto : detallesPedidoDTO) {
             DetallePedido detalle = new DetallePedido();
@@ -45,26 +59,59 @@ public class PedidoController {
             detalle.setNotas(dto.getNotas());
             detallesParaBD.add(detalle);
         }
+
+        // Ahora llama al DAO con todos los argumentos requeridos, incluyendo los resúmenes
         pedidoDAO.insertarPedidoConDetalles(pedido, detallesParaBD, productosResumen, categoriasResumen);
     }
 
+    /**
+     * Actualiza el estado de un pedido específico.
+     * @param pedidoId El ID del pedido a actualizar.
+     * @param nuevoEstado El nuevo estado del pedido (ej. "cancelado", "entregado", "pagado").
+     * @throws SQLException Si ocurre un error de base de datos.
+     */
     public void actualizarEstado(int pedidoId, String nuevoEstado) throws SQLException {
         pedidoDAO.actualizarEstadoPedido(pedidoId, nuevoEstado);
     }
 
+    /**
+     * Obtiene un pedido completo por su ID.
+     * @param pedidoId El ID del pedido a obtener.
+     * @return El objeto Pedido si se encuentra, null si no.
+     * @throws SQLException Si ocurre un error de base de datos.
+     */
     public Pedido obtenerPedidoPorId(int pedidoId) throws SQLException {
         return pedidoDAO.obtenerPedidoPorId(pedidoId);
     }
 
+    /**
+     * Obtiene la lista de detalles para un pedido específico.
+     * Este método es llamado por la vista de edición para cargar los productos de un pedido existente.
+     * @param pedidoId El ID del pedido del cual obtener los detalles.
+     * @return Una lista de objetos DetallePedido.
+     * @throws SQLException Si ocurre un error de base de datos.
+     */
     public List<DetallePedido> obtenerDetallesPorPedidoId(int pedidoId) throws SQLException {
         return pedidoDAO.obtenerDetallesPorPedidoId(pedidoId);
     }
 
+    /**
+     * Actualiza un pedido existente y sus detalles.
+     * Este método es el que la vista de edición llamaría para guardar los cambios.
+     * Genera los resúmenes de productos y categorías a partir de los detalles para guardarlos en el pedido principal.
+     *
+     * @param pedido                  Objeto Pedido con los datos actualizados (debe tener el pedidoId).
+     * @param detallesPedidoDTO       Lista de DTOs de detalles del pedido desde la vista (los nuevos detalles).
+     * @throws SQLException Si ocurre un error de base de datos.
+     */
     public void actualizarPedido(Pedido pedido, List<DetallePedidoDTO> detallesPedidoDTO) throws SQLException {
+        // Convertir la lista de DetallePedidoDTO a DetallePedido para el DAO
         List<DetallePedido> detallesParaBD = new ArrayList<>();
         StringBuilder productosResumen = new StringBuilder();
         Set<String> categoriasUnicas = new HashSet<>();
 
+        // Para construir los resúmenes, necesitamos los nombres de los productos y categorías.
+        // Asumo que ProductoDAO tiene métodos para obtener Producto y Categoria por ID.
         for (DetallePedidoDTO dto : detallesPedidoDTO) {
             DetallePedido detalle = new DetallePedido();
             detalle.setProductoId(dto.getProductoId());
@@ -85,10 +132,19 @@ public class PedidoController {
                 }
             }
         }
+
         String categoriasResumenStr = String.join(", ", categoriasUnicas);
+
+        // Llama al DAO para actualizar el pedido y sus detalles
         pedidoDAO.actualizarPedidoConDetalles(pedido, detallesParaBD, productosResumen.toString(), categoriasResumenStr);
     }
 
+    /**
+     * Obtiene todos los pedidos de la base de datos.
+     * Este método es usado por vistas para cargar una lista completa de pedidos.
+     * @return Una lista de objetos Pedido.
+     * @throws SQLException Si ocurre un error de base de datos.
+     */
     public List<Pedido> obtenerTodosLosPedidos() throws SQLException {
         return pedidoDAO.obtenerTodosLosPedidos();
     }
@@ -117,9 +173,8 @@ public class PedidoController {
 
         for (Pedido p : todosLosPedidosRelevantes) {
             Map<String, Object> pedidoMap = new HashMap<>();
-            // Asegúrate de que las claves coincidan con las que CocinaPanelView espera
-            pedidoMap.put("id", p.getPedidoId()); // AGREGADO o VERIFICADO: Clave "id" para ID Pedido
-            pedidoMap.put("mesa", p.getMesa());   // AGREGADO o VERIFICADO: Clave "mesa" para Mesa
+            pedidoMap.put("id", p.getPedidoId()); // Clave "id" para ID Pedido
+            pedidoMap.put("mesa", p.getMesa());   // Clave "mesa" para Mesa
 
             pedidoMap.put("productos", p.getProductosResumen());
             pedidoMap.put("categorias", p.getCategoriasResumen());
@@ -128,9 +183,9 @@ public class PedidoController {
             if (horaParaCocina == null && p.getFechaCreacion() != null) {
                 horaParaCocina = p.getFechaCreacion().toLocalDateTime(); // Fallback si horaEntrada es null
             }
-            pedidoMap.put("hora", horaParaCocina); // AGREGADO o VERIFICADO: Clave "hora" para Hora Entrada
+            pedidoMap.put("hora", horaParaCocina); // Clave "hora" para Hora Entrada
 
-            pedidoMap.put("estado", p.getEstado());
+            pedidoMap.put("estado", p.getEstado()); // Clave "estado" para el estado del pedido
 
             pedidosFormateados.add(pedidoMap);
         }

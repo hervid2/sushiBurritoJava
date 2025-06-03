@@ -4,7 +4,6 @@ import main.java.com.restaurante.app.database.UsuarioDAO;
 import main.java.com.restaurante.app.models.Usuario;
 import main.java.com.restaurante.app.views.admin.AdminPanelView;
 import main.java.com.restaurante.app.views.cocina.CocinaPanelView;
-import main.java.com.restaurante.app.views.mesero.GenerarComandaView;
 import main.java.com.restaurante.app.views.mesero.WaiterPanelView;
 
 import javax.swing.*;
@@ -21,6 +20,53 @@ public class UsuarioController {
     public UsuarioController() throws SQLException {
         this.usuarioDAO = new UsuarioDAO();
     }
+
+    // ... (tus otros métodos existentes)
+
+    /**
+     * Verifica si un usuario existe en la base de datos por su correo electrónico.
+     * @param correo El correo electrónico a verificar.
+     * @return true si el usuario existe, false en caso contrario.
+     * @throws SQLException Si ocurre un error de SQL al consultar la base de datos.
+     */
+    public boolean usuarioExistePorCorreo(String correo) throws SQLException {
+        // Reutilizamos el método obtenerPorCorreo de UsuarioDAO
+        return usuarioDAO.obtenerPorCorreo(correo) != null;
+    }
+
+    /**
+     * Reestablece la contraseña de un usuario dado su correo electrónico y la nueva contraseña.
+     * @param correo El correo electrónico del usuario.
+     * @param nuevaContrasena La nueva contraseña.
+     * @return true si la contraseña se reestablece exitosamente, false en caso contrario.
+     * @throws SQLException Si ocurre un error de SQL.
+     */
+    public boolean reestablecerContrasena(String correo, String nuevaContrasena) throws SQLException {
+        // Aquí puedes agregar validaciones adicionales para la nueva contraseña si es necesario
+        // antes de hashearla y actualizarla.
+        if (nuevaContrasena == null || nuevaContrasena.isEmpty()) {
+            return false; // O lanza una excepción o muestra un mensaje de error
+        }
+
+        // Primero, obtener el usuario para actualizar su contraseña
+        Usuario usuario = usuarioDAO.obtenerPorCorreo(correo);
+        if (usuario == null) {
+            return false; // Usuario no encontrado
+        }
+
+        // Hashear la nueva contraseña
+        String hashNuevaContrasena = hashPassword(nuevaContrasena);
+
+        // Actualizar la contraseña en la base de datos
+        // Necesitarás un método en UsuarioDAO para actualizar la contraseña de un usuario
+        // por su ID o correo. Por ejemplo: usuarioDAO.actualizarContrasena(usuario.getId(), hashNuevaContrasena);
+        // O si tu usuarioDAO.actualizar(Usuario) ya lo permite:
+        usuario.setContrasena(hashNuevaContrasena);
+        usuarioDAO.actualizar(usuario); // Asumiendo que 'actualizar' actualiza todos los campos incluyendo la contraseña
+        return true;
+    }
+    
+    
 
     public boolean login(String correo, String contrasena, JFrame loginFrame) throws SQLException {
         if (correo == null || correo.isEmpty() || contrasena == null || contrasena.isEmpty()) {
