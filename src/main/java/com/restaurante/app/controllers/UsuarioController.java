@@ -21,8 +21,6 @@ public class UsuarioController {
         this.usuarioDAO = new UsuarioDAO();
     }
 
-    // ... (tus otros métodos existentes)
-
     /**
      * Verifica si un usuario existe en la base de datos por su correo electrónico.
      * @param correo El correo electrónico a verificar.
@@ -30,7 +28,6 @@ public class UsuarioController {
      * @throws SQLException Si ocurre un error de SQL al consultar la base de datos.
      */
     public boolean usuarioExistePorCorreo(String correo) throws SQLException {
-        // Reutilizamos el método obtenerPorCorreo de UsuarioDAO
         return usuarioDAO.obtenerPorCorreo(correo) != null;
     }
 
@@ -42,32 +39,22 @@ public class UsuarioController {
      * @throws SQLException Si ocurre un error de SQL.
      */
     public boolean reestablecerContrasena(String correo, String nuevaContrasena) throws SQLException {
-        // Aquí puedes agregar validaciones adicionales para la nueva contraseña si es necesario
-        // antes de hashearla y actualizarla.
         if (nuevaContrasena == null || nuevaContrasena.isEmpty()) {
-            return false; // O lanza una excepción o muestra un mensaje de error
+            JOptionPane.showMessageDialog(null, "La nueva contraseña no puede estar vacía.", "Error", JOptionPane.ERROR_MESSAGE);
+            return false;
         }
 
-        // Primero, obtener el usuario para actualizar su contraseña
         Usuario usuario = usuarioDAO.obtenerPorCorreo(correo);
         if (usuario == null) {
-            return false; // Usuario no encontrado
+            JOptionPane.showMessageDialog(null, "Usuario no encontrado.", "Error", JOptionPane.ERROR_MESSAGE);
+            return false;
         }
 
-        // Hashear la nueva contraseña
         String hashNuevaContrasena = hashPassword(nuevaContrasena);
-
-        // Actualizar la contraseña en la base de datos
-        // Necesitarás un método en UsuarioDAO para actualizar la contraseña de un usuario
-        // por su ID o correo. Por ejemplo: usuarioDAO.actualizarContrasena(usuario.getId(), hashNuevaContrasena);
-        // O si tu usuarioDAO.actualizar(Usuario) ya lo permite:
         usuario.setContrasena(hashNuevaContrasena);
-        usuarioDAO.actualizar(usuario); // Asumiendo que 'actualizar' actualiza todos los campos incluyendo la contraseña
-        return true;
+        return usuarioDAO.actualizar(usuario); // Ajustado para que UsuarioDAO.actualizar devuelva boolean
     }
     
-    
-
     public boolean login(String correo, String contrasena, JFrame loginFrame) throws SQLException {
         if (correo == null || correo.isEmpty() || contrasena == null || contrasena.isEmpty()) {
             JOptionPane.showMessageDialog(null, "Correo y contraseña no pueden estar vacíos.");
@@ -90,7 +77,7 @@ public class UsuarioController {
                 new AdminPanelView().setVisible(true);
                 break;
             case "mesero":
-            	new WaiterPanelView(usuario.getId()).setVisible(true);
+            	new WaiterPanelView(usuario.getId()).setVisible(true); // Usar getId() según tu Usuario.java
                 break;
             case "cocinero":
                 new CocinaPanelView().setVisible(true);
@@ -107,12 +94,11 @@ public class UsuarioController {
 
         if (nombre == null || !nombre.matches("^[\\p{L} ]{6,40}$")) {
             errores.add("El nombre debe tener entre 6 y 40 letras y puede incluir espacios.");
-        }
-         else if (usuarioDAO.obtenerPorNombre(nombre) != null) {
+        } else if (usuarioDAO.obtenerPorNombre(nombre) != null) {
             errores.add("El nombre de usuario ya está en uso.");
         }
 
-        if (correo == null || !Pattern.matches("^[\\w-\\.+]+@([\\w-]+\\.)+[\\w-]{2,4}$", correo)) {
+        if (correo == null || !Pattern.matches("^[\\w-\\.\\+]+@([\\w-]+\\.)+[\\w-]{2,4}$", correo)) {
             errores.add("El correo electrónico no tiene un formato válido.");
         } else if (usuarioDAO.obtenerPorCorreo(correo) != null) {
             errores.add("Ya existe una cuenta con ese correo.");
@@ -147,10 +133,71 @@ public class UsuarioController {
         nuevo.setCorreo(correo);
         nuevo.setRol(rol.toLowerCase());
         nuevo.setContrasena(hash);
-        usuarioDAO.insertar(nuevo);
-        return true;
+        return usuarioDAO.insertar(nuevo); // Ajustado para que UsuarioDAO.insertar devuelva boolean
     }
 
+    // --- NUEVO MÉTODO PARA ELIMINAR USUARIO ---
+    /**
+     * Elimina un usuario de la base de datos por su correo electrónico.
+     * @param correo El correo electrónico del usuario a eliminar.
+     * @return true si el usuario fue eliminado exitosamente, false si no se encontró o hubo un error.
+     * @throws SQLException Si ocurre un error de SQL.
+     */
+    public boolean eliminarUsuario(String correo) throws SQLException {
+        if (correo == null || correo.isEmpty()) {
+            JOptionPane.showMessageDialog(null, "El correo para eliminar no puede estar vacío.", "Error", JOptionPane.ERROR_MESSAGE);
+            return false;
+        }
+        
+        // Verificar que el usuario existe antes de intentar eliminar.
+        Usuario usuarioAEliminar = usuarioDAO.obtenerPorCorreo(correo);
+        if (usuarioAEliminar == null) {
+            JOptionPane.showMessageDialog(null, "No se encontró un usuario con ese correo para eliminar.", "Error", JOptionPane.ERROR_MESSAGE);
+            return false;
+        }
+        
+        // Llamar al método eliminar del DAO que ahora recibe un correo
+        return usuarioDAO.eliminar(correo); 
+    }
+
+    // --- NUEVO MÉTODO PARA ACTUALIZAR CORREO DE USUARIO ---
+    /**
+     * Actualiza el correo electrónico de un usuario.
+     * @param oldCorreo El correo electrónico actual del usuario.
+     * @param newCorreo El nuevo correo electrónico para el usuario.
+     * @return true si el correo fue actualizado exitosamente, false si el usuario no existe o el nuevo correo ya está en uso.
+     * @throws SQLException Si ocurre un error de SQL.
+     */
+    public boolean actualizarCorreoUsuario(String oldCorreo, String newCorreo) throws SQLException {
+        if (oldCorreo == null || oldCorreo.isEmpty() || newCorreo == null || newCorreo.isEmpty()) {
+            JOptionPane.showMessageDialog(null, "Los campos de correo no pueden estar vacíos.", "Error", JOptionPane.ERROR_MESSAGE);
+            return false;
+        }
+        if (oldCorreo.equals(newCorreo)) {
+            JOptionPane.showMessageDialog(null, "El nuevo correo no puede ser igual al actual.", "Error", JOptionPane.ERROR_MESSAGE);
+            return false;
+        }
+
+        // 1. Verificar si el usuario con el correo antiguo existe
+        Usuario usuarioExistente = usuarioDAO.obtenerPorCorreo(oldCorreo);
+        if (usuarioExistente == null) {
+            JOptionPane.showMessageDialog(null, "No se encontró un usuario con el correo actual: " + oldCorreo, "Error", JOptionPane.ERROR_MESSAGE);
+            return false;
+        }
+        
+        // 2. Verificar si el nuevo correo ya está en uso por OTRA persona
+        Usuario usuarioConNuevoCorreo = usuarioDAO.obtenerPorCorreo(newCorreo);
+        // Si se encontró un usuario con el nuevo correo Y su ID es diferente al del usuario que estamos actualizando
+        if (usuarioConNuevoCorreo != null && usuarioConNuevoCorreo.getId() != usuarioExistente.getId()) {
+            JOptionPane.showMessageDialog(null, "El nuevo correo '" + newCorreo + "' ya está en uso por otro usuario.", "Error", JOptionPane.ERROR_MESSAGE);
+            return false;
+        }
+
+        // Si todo es válido, procede a actualizar llamando al nuevo método en DAO
+        return usuarioDAO.actualizarCorreo(oldCorreo, newCorreo);
+    }
+
+    // Tu método hashPassword existente
     private String hashPassword(String contrasena) {
         try {
             MessageDigest md = MessageDigest.getInstance("SHA-256");
@@ -161,9 +208,9 @@ public class UsuarioController {
             }
             return sb.toString();
         } catch (NoSuchAlgorithmException e) {
+            // Es mejor relanzar como una RuntimeException si es un error irrecuperable
+            // o manejarlo de forma más específica si es posible.
             throw new RuntimeException("Error al hashear la contraseña", e);
         }
     }
 }
-
- 

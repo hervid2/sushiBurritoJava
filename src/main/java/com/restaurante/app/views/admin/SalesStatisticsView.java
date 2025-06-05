@@ -191,6 +191,11 @@ public class SalesStatisticsView extends JFrame {
 
             if (userSelection == JFileChooser.APPROVE_OPTION) {
                 File selectedFile = fileChooser.getSelectedFile();
+                // Asegurarse de que el archivo tenga la extensión .pdf
+                String filePath = selectedFile.getAbsolutePath();
+                if (!filePath.toLowerCase().endsWith(".pdf")) {
+                    selectedFile = new File(filePath + ".pdf");
+                }
                 generatePDF(selectedFile);
             }
         });
@@ -212,17 +217,22 @@ public class SalesStatisticsView extends JFrame {
             document.addPage(page);
 
             PDPageContentStream content = new PDPageContentStream(document, page);
-            content.setNonStrokingColor(255, 250, 205);
+            // CORRECCIÓN AQUÍ: Usar java.awt.Color para definir el color de fondo
+            content.setNonStrokingColor(new Color(255, 250, 205)); // Fondo de la página
             content.addRect(0, 0, PDRectangle.A4.getWidth(), PDRectangle.A4.getHeight());
             content.fill();
 
+            // Logo (asegúrate de que la ruta sea correcta y el archivo exista)
             try {
-                PDImageXObject logo = PDImageXObject.createFromFile("/main/resources/images/icons/logo.jpg", document);
+                // Modifica esta línea si la ruta del logo no es absoluta o está en un JAR
+                PDImageXObject logo = PDImageXObject.createFromFile("src/main/resources/images/icons/logo.jpg", document);
                 content.drawImage(logo, 50, PDRectangle.A4.getHeight() - 100, 80, 80);
             } catch (IOException ex) {
                 System.err.println("No se pudo cargar el logo: " + ex.getMessage());
+                // Considera usar un placeholder o lanzar una excepción para avisar al usuario
             }
 
+            // Título del documento
             content.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 20);
             content.beginText();
             content.setNonStrokingColor(Color.BLACK);
@@ -230,6 +240,7 @@ public class SalesStatisticsView extends JFrame {
             content.showText("Estadísticas de Ventas");
             content.endText();
 
+            // Resumen de estadísticas
             content.beginText();
             content.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA), 12);
             content.newLineAtOffset(50, PDRectangle.A4.getHeight() - 170);
@@ -239,6 +250,77 @@ public class SalesStatisticsView extends JFrame {
             content.newLineAtOffset(0, -15);
             content.showText(totalIngresosLabel.getText());
             content.endText();
+
+            // --- Dibujar la tabla de ventas ---
+            DefaultTableModel model = (DefaultTableModel) salesTable.getModel();
+            int rowCount = model.getRowCount();
+            int colCount = model.getColumnCount();
+
+            float margin = 50;
+            float yStart = PDRectangle.A4.getHeight() - 280; // Posición inicial Y para la tabla
+            float tableWidth = PDRectangle.A4.getWidth() - 2 * margin;
+            float rowHeight = 20f;
+            float cellMargin = 5f;
+
+            // Anchos de columna (ajusta según tus necesidades)
+            float[] colWidths = {tableWidth * 0.3f, tableWidth * 0.4f, tableWidth * 0.3f};
+
+            // Dibujar encabezados de la tabla
+            float yPosition = yStart;
+            float xPosition = margin;
+
+            content.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 10);
+            for (int i = 0; i < colCount; i++) {
+                content.setNonStrokingColor(Color.DARK_GRAY); // Color de fondo para encabezados
+                content.addRect(xPosition, yPosition - rowHeight, colWidths[i], rowHeight);
+                content.fill();
+                content.setNonStrokingColor(Color.WHITE); // Color de texto para encabezados
+                content.beginText();
+                content.newLineAtOffset(xPosition + cellMargin, yPosition - rowHeight + cellMargin);
+                content.showText(model.getColumnName(i));
+                content.endText();
+                xPosition += colWidths[i];
+            }
+            yPosition -= rowHeight;
+
+            // Dibujar filas de la tabla
+            content.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA), 9);
+            content.setNonStrokingColor(Color.BLACK); // Color de texto para las celdas
+
+            for (int i = 0; i < rowCount; i++) {
+                xPosition = margin;
+                for (int j = 0; j < colCount; j++) {
+                    // Dibujar el borde de la celda
+                    content.setStrokingColor(Color.LIGHT_GRAY);
+                    content.setLineWidth(0.5f);
+                    content.addRect(xPosition, yPosition - rowHeight, colWidths[j], rowHeight);
+                    content.stroke();
+
+                    // Dibujar el texto de la celda
+                    content.beginText();
+                    content.newLineAtOffset(xPosition + cellMargin, yPosition - rowHeight + cellMargin);
+                    Object value = model.getValueAt(i, j);
+                    content.showText(value != null ? value.toString() : "");
+                    content.endText();
+                    xPosition += colWidths[j];
+                }
+                yPosition -= rowHeight;
+                // Si la tabla supera el límite de la página, crear una nueva página (lógica simple, se puede mejorar)
+                if (yPosition < margin + rowHeight) {
+                    content.close();
+                    page = new PDPage(PDRectangle.A4);
+                    document.addPage(page);
+                    content = new PDPageContentStream(document, page);
+                    // CORRECCIÓN AQUÍ: Restablecer el color de fondo para la nueva página
+                    content.setNonStrokingColor(new Color(255, 250, 205));
+                    content.addRect(0, 0, PDRectangle.A4.getWidth(), PDRectangle.A4.getHeight());
+                    content.fill();
+                    yPosition = PDRectangle.A4.getHeight() - margin; // Reiniciar la posición Y
+                    content.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA), 9); // Restablecer la fuente
+                    content.setNonStrokingColor(Color.BLACK); // Restablecer el color de texto
+                }
+            }
+            // --- Fin de dibujar la tabla ---
 
             content.close();
             document.save(file);

@@ -10,17 +10,19 @@ public class UsuarioDAO {
     private final Connection connection;
 
     public UsuarioDAO() throws SQLException {
+        // Usar tu clase de conexión existente 'Conexion'
         this.connection = Conexion.getConnection();
     }
 
-    public void insertar(Usuario usuario) throws SQLException {
+    public boolean insertar(Usuario usuario) throws SQLException {
         String sql = "INSERT INTO usuarios (nombre, rol, correo, contrasena) VALUES (?, ?, ?, ?)";
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setString(1, usuario.getNombre());
             stmt.setString(2, usuario.getRol());
             stmt.setString(3, usuario.getCorreo());
             stmt.setString(4, usuario.getContrasena());
-            stmt.executeUpdate();
+            // Devuelve true si se insertó al menos una fila
+            return stmt.executeUpdate() > 0;
         }
     }
 
@@ -60,29 +62,43 @@ public class UsuarioDAO {
         return usuarios;
     }
 
-    public void actualizar(Usuario usuario) throws SQLException {
+    public boolean actualizar(Usuario usuario) throws SQLException {
         String sql = "UPDATE usuarios SET nombre = ?, rol = ?, correo = ?, contrasena = ? WHERE usuario_id = ?";
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setString(1, usuario.getNombre());
             stmt.setString(2, usuario.getRol());
             stmt.setString(3, usuario.getCorreo());
             stmt.setString(4, usuario.getContrasena());
-            stmt.setInt(5, usuario.getId());
-            stmt.executeUpdate();
+            stmt.setInt(5, usuario.getId()); // Asumo que getId() es el ID de usuario
+            // Devuelve true si se actualizó al menos una fila
+            return stmt.executeUpdate() > 0;
         }
     }
 
-    public boolean eliminar(int id) throws SQLException {
-        String sql = "DELETE FROM usuarios WHERE usuario_id = ?";
+    // --- MODIFICADO: ELIMINAR POR CORREO EN LUGAR DE ID ---
+    public boolean eliminar(String correo) throws SQLException {
+        String sql = "DELETE FROM usuarios WHERE correo = ?";
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
-            stmt.setInt(1, id);
+            stmt.setString(1, correo);
+            // Devuelve true si se eliminó al menos una fila
+            return stmt.executeUpdate() > 0;
+        }
+    }
+
+    // --- NUEVO MÉTODO PARA ACTUALIZAR CORREO ---
+    public boolean actualizarCorreo(String oldCorreo, String newCorreo) throws SQLException {
+        String sql = "UPDATE usuarios SET correo = ? WHERE correo = ?";
+        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
+            stmt.setString(1, newCorreo);
+            stmt.setString(2, oldCorreo);
+            // Devuelve true si se actualizó al menos una fila
             return stmt.executeUpdate() > 0;
         }
     }
 
     private Usuario mapUsuario(ResultSet rs) throws SQLException {
         Usuario u = new Usuario();
-        u.setId(rs.getInt("usuario_id"));
+        u.setId(rs.getInt("usuario_id")); // Asegúrate de que tu clase Usuario tiene setId
         u.setNombre(rs.getString("nombre"));
         u.setRol(rs.getString("rol"));
         u.setCorreo(rs.getString("correo"));
