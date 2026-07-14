@@ -1,8 +1,9 @@
-package main.java.com.restaurante.app.views.mesero;
+package com.restaurante.app.views.mesero;
 
 import com.formdev.flatlaf.FlatLightLaf;
-import main.java.com.restaurante.app.database.PedidoDAO;
-import main.java.com.restaurante.app.models.Pedido;
+import com.restaurante.app.config.SpringContext;
+import com.restaurante.app.database.PedidoDAO;
+import com.restaurante.app.models.Pedido;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -23,8 +24,8 @@ public class CancelarPedidoView extends JFrame {
     public CancelarPedidoView(int usuarioId) { // Añadir usuarioId al constructor
         this.usuarioId = usuarioId;
         try {
-            pedidoDAO = new PedidoDAO(); // Inicializar el DAO
-        } catch (SQLException e) {
+            pedidoDAO = SpringContext.getBean(PedidoDAO.class); // Obtener el DAO del contexto
+        } catch (Exception e) {
             JOptionPane.showMessageDialog(this, "Error al conectar con la base de datos: " + e.getMessage(), "Error de DB", JOptionPane.ERROR_MESSAGE);
             e.printStackTrace();
             // Considera si quieres deshabilitar funcionalidades o salir si no hay conexión

@@ -1,8 +1,9 @@
-package main.java.com.restaurante.app.views.cocina;
+package com.restaurante.app.views.cocina;
 
 import com.formdev.flatlaf.FlatLightLaf;
-import main.java.com.restaurante.app.controllers.PedidoController; // Importar el controlador
-import main.java.com.restaurante.app.views.authentication.LoginView; // Para el botón de cerrar sesión
+import com.restaurante.app.config.SpringContext;
+import com.restaurante.app.service.PedidoService;
+import com.restaurante.app.views.authentication.LoginView; // Para el botón de cerrar sesión
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -28,13 +29,13 @@ public class CocinaPanelView extends JFrame {
     private JTable tablaPreparacion;
     private DefaultTableModel modelEntrantes;
     private DefaultTableModel modelPreparacion;
-    private PedidoController pedidoController; // Instancia del controlador
+    private PedidoService pedidoService;
 
     public CocinaPanelView() {
         try {
-            this.pedidoController = new PedidoController(); // Inicializar el controlador
-        } catch (SQLException e) {
-            JOptionPane.showMessageDialog(this, "Error al inicializar el controlador de pedidos:\n" + e.getMessage(), "Error de DB", JOptionPane.ERROR_MESSAGE);
+            this.pedidoService = SpringContext.getBean(PedidoService.class);
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "Error al inicializar el servicio de pedidos:\n" + e.getMessage(), "Error de DB", JOptionPane.ERROR_MESSAGE);
             e.printStackTrace();
             // Considera si quieres salir o deshabilitar funcionalidades
         }
@@ -45,8 +46,8 @@ public class CocinaPanelView extends JFrame {
         this.addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosing(WindowEvent windowEvent) {
-                if (pedidoController != null) {
-                    pedidoController.closeDAOs();
+                if (pedidoService != null) {
+                    pedidoService.close();
                 }
             }
         });
@@ -58,7 +59,7 @@ public class CocinaPanelView extends JFrame {
 
         try {
             // Obtener todos los pedidos relevantes para la cocina
-            List<Map<String, Object>> pedidos = pedidoController.obtenerPedidosParaCocina();
+            List<Map<String, Object>> pedidos = pedidoService.obtenerPedidosParaCocina();
 
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM HH:mm");
 
@@ -183,7 +184,7 @@ public class CocinaPanelView extends JFrame {
             if (fila != -1) {
                 int pedidoId = (int) modelEntrantes.getValueAt(fila, 0); // Obtener ID directamente
                 try {
-                    pedidoController.actualizarEstado(pedidoId, "preparando"); // Usar la instancia del controlador
+                    pedidoService.actualizarEstado(pedidoId, "preparando");
                     JOptionPane.showMessageDialog(this, "Pedido #" + pedidoId + " pasado a preparación.");
                     cargarPedidos(); // Recargar ambas tablas para reflejar el cambio
                 } catch (Exception ex) {
@@ -227,7 +228,7 @@ public class CocinaPanelView extends JFrame {
             if (fila != -1) {
                 int pedidoId = (int) modelPreparacion.getValueAt(fila, 0);
                 try {
-                    pedidoController.actualizarEstado(pedidoId, "entregado"); // Cambiar a "entregado" para que el mesero lo cierre
+                    pedidoService.actualizarEstado(pedidoId, "entregado"); // Cambiar a "entregado" para que el mesero lo cierre
                     JOptionPane.showMessageDialog(this, "Pedido #" + pedidoId + " marcado como preparado. Notifica al mesero para entrega.");
                     cargarPedidos(); // Recargar ambas tablas para reflejar el cambio
                 } catch (Exception ex) {

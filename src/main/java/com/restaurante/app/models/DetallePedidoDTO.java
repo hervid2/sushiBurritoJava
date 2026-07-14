@@ -1,4 +1,4 @@
-package main.java.com.restaurante.app.models;
+package com.restaurante.app.models;
 
 public class DetallePedidoDTO {
     private int productoId; // Cambiado de String producto a int productoId

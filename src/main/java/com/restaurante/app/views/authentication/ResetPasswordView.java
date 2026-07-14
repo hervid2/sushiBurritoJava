@@ -1,7 +1,8 @@
-package main.java.com.restaurante.app.views.authentication;
+package com.restaurante.app.views.authentication;
 
 import com.formdev.flatlaf.FlatLightLaf;
-import main.java.com.restaurante.app.controllers.UsuarioController;
+import com.restaurante.app.config.SpringContext;
+import com.restaurante.app.service.UsuarioService;
 
 import javax.swing.*;
 import java.awt.*;
@@ -26,7 +27,7 @@ public class ResetPasswordView extends BaseAuthView {
 
     @Override
     protected String getBackgroundImagePath() {
-        return "/main/resources/images/ui/imagenLoginForgotPassword.jpg"; 
+        return "/images/ui/imagenLoginForgotPassword.jpg"; 
     }
 
     @Override
@@ -74,9 +75,9 @@ public class ResetPasswordView extends BaseAuthView {
                 return;
             }
 
+            UsuarioService usuarioService = SpringContext.getBean(UsuarioService.class);
             try {
-                UsuarioController controller = new UsuarioController();
-                if (controller.usuarioExistePorCorreo(correo)) {
+                if (usuarioService.existsByEmail(correo)) {
                     dispose();
                     new SetNewPasswordView(correo).setVisible(true);
                 } else {

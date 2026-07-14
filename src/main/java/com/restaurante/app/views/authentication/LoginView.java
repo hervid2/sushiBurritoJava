@@ -1,7 +1,11 @@
-package main.java.com.restaurante.app.views.authentication;
+package com.restaurante.app.views.authentication;
 
 import com.formdev.flatlaf.FlatLightLaf;
-import main.java.com.restaurante.app.controllers.UsuarioController;
+import com.restaurante.app.config.SpringContext;
+import com.restaurante.app.exception.DomainException;
+import com.restaurante.app.models.Usuario;
+import com.restaurante.app.navigation.NavigationManager;
+import com.restaurante.app.service.UsuarioService;
 
 import javax.swing.*;
 import java.awt.*;
@@ -31,7 +35,7 @@ public class LoginView extends BaseAuthView {
 
     @Override
     protected String getBackgroundImagePath() {
-        return "/main/resources/images/ui/imagenLogin.jpg";
+        return "/images/ui/imagenLogin.jpg";
     }
 
     @Override
@@ -122,12 +126,18 @@ public class LoginView extends BaseAuthView {
                 return;
             }
 
+            UsuarioService usuarioService = SpringContext.getBean(UsuarioService.class);
             try {
-                UsuarioController controller = new UsuarioController();
-                controller.login(correo, contrasena, frame);
+                Usuario usuario = usuarioService.authenticate(correo, contrasena);
+                frame.dispose();
+                SpringContext.getBean(NavigationManager.class).openHomeFor(usuario);
+            } catch (DomainException ex) {
+                JOptionPane.showMessageDialog(frame, ex.getMessage());
             } catch (SQLException ex) {
                 JOptionPane.showMessageDialog(frame, "Error de conexión a base de datos: " + ex.getMessage());
                 ex.printStackTrace();
+            } finally {
+                usuarioService.close();
             }
         });
         panel.add(btnIngresar);

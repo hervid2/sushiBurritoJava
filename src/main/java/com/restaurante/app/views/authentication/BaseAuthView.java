@@ -1,4 +1,4 @@
-package main.java.com.restaurante.app.views.authentication;
+package com.restaurante.app.views.authentication;
 
 import com.formdev.flatlaf.FlatLightLaf;
 import javax.swing.*;
@@ -79,7 +79,7 @@ public abstract class BaseAuthView {
         panelWithImage.add(lblTitulo);
         
         // Logo redondo
-        ImageIcon originalIcon = new ImageIcon(getClass().getResource("/main/resources/images/icons/logo.jpg"));
+        ImageIcon originalIcon = new ImageIcon(getClass().getResource("/images/icons/logo.jpg"));
         Image img = originalIcon.getImage().getScaledInstance(150, 150, Image.SCALE_SMOOTH);
         RoundLabel lblLogo = new RoundLabel(new ImageIcon(img));
         lblLogo.setBounds(142, 284, 150, 150);

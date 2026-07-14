@@ -1,11 +1,12 @@
-package main.java.com.restaurante.app.views.mesero;
+package com.restaurante.app.views.mesero;
 
 import com.formdev.flatlaf.FlatLightLaf;
-import main.java.com.restaurante.app.database.PedidoDAO;
-import main.java.com.restaurante.app.database.ProductoDAO;
-import main.java.com.restaurante.app.models.Pedido;
-import main.java.com.restaurante.app.models.DetallePedido;
-import main.java.com.restaurante.app.models.Producto;
+import com.restaurante.app.config.SpringContext;
+import com.restaurante.app.database.PedidoDAO;
+import com.restaurante.app.database.ProductoDAO;
+import com.restaurante.app.models.Pedido;
+import com.restaurante.app.models.DetallePedido;
+import com.restaurante.app.models.Producto;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -29,9 +30,9 @@ public class VerPedidosEnProgresoView extends JFrame {
     public VerPedidosEnProgresoView(int usuarioId) {
         this.usuarioId = usuarioId;
         try {
-            pedidoDAO = new PedidoDAO();
-            productoDAO = new ProductoDAO();
-        } catch (SQLException e) {
+            pedidoDAO = SpringContext.getBean(PedidoDAO.class);
+            productoDAO = SpringContext.getBean(ProductoDAO.class);
+        } catch (Exception e) {
             JOptionPane.showMessageDialog(this, "Error al conectar con la base de datos: " + e.getMessage(), "Error de DB", JOptionPane.ERROR_MESSAGE);
             e.printStackTrace();
         }

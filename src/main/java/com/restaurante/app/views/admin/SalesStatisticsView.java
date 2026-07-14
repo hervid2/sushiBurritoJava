@@ -1,10 +1,11 @@
-package main.java.com.restaurante.app.views.admin;
+package com.restaurante.app.views.admin;
 
 import com.formdev.flatlaf.FlatLightLaf;
 import com.toedter.calendar.JDateChooser;
-import main.java.com.restaurante.app.controllers.EstadisticasController;
-import main.java.com.restaurante.app.models.EstadisticaProductoDTO;
-import main.java.com.restaurante.app.models.Factura;
+import com.restaurante.app.config.SpringContext;
+import com.restaurante.app.service.EstadisticaService;
+import com.restaurante.app.models.EstadisticaProductoDTO;
+import com.restaurante.app.models.Factura;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
@@ -20,6 +21,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -159,8 +161,13 @@ public class SalesStatisticsView extends JFrame {
                 LocalDateTime desdeLdt = desde.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
                 LocalDateTime hastaLdt = hasta.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
 
-                EstadisticasController controller = new EstadisticasController();
-                Map<String, Object> datos = controller.generarEstadisticas(desdeLdt, hastaLdt);
+                EstadisticaService estadisticaService = SpringContext.getBean(EstadisticaService.class);
+                Map<String, Object> datos;
+                try {
+                    datos = estadisticaService.generarEstadisticas(desdeLdt, hastaLdt);
+                } finally {
+                    estadisticaService.close();
+                }
 
                 List<Factura> facturas = (List<Factura>) datos.get("facturas");
                 DefaultTableModel model = (DefaultTableModel) salesTable.getModel();
@@ -222,14 +229,15 @@ public class SalesStatisticsView extends JFrame {
             content.addRect(0, 0, PDRectangle.A4.getWidth(), PDRectangle.A4.getHeight());
             content.fill();
 
-            // Logo (asegúrate de que la ruta sea correcta y el archivo exista)
-            try {
-                // Modifica esta línea si la ruta del logo no es absoluta o está en un JAR
-                PDImageXObject logo = PDImageXObject.createFromFile("src/main/resources/images/icons/logo.jpg", document);
-                content.drawImage(logo, 50, PDRectangle.A4.getHeight() - 100, 80, 80);
+            // Load the logo from the classpath so it also resolves when running from the packaged JAR.
+            try (InputStream logoStream = getClass().getResourceAsStream("/images/icons/logo.jpg")) {
+                if (logoStream != null) {
+                    PDImageXObject logo = PDImageXObject.createFromByteArray(
+                            document, logoStream.readAllBytes(), "logo");
+                    content.drawImage(logo, 50, PDRectangle.A4.getHeight() - 100, 80, 80);
+                }
             } catch (IOException ex) {
                 System.err.println("No se pudo cargar el logo: " + ex.getMessage());
-                // Considera usar un placeholder o lanzar una excepción para avisar al usuario
             }
 
             // Título del documento

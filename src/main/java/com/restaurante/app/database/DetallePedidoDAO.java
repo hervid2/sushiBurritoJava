@@ -1,11 +1,21 @@
-package main.java.com.restaurante.app.database;
+package com.restaurante.app.database;
 
-import main.java.com.restaurante.app.models.DetallePedido;
+import com.restaurante.app.models.DetallePedido;
 
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.springframework.context.annotation.Scope;
+import org.springframework.stereotype.Repository;
+
+/**
+ * JDBC data-access object for {@code detalle_pedido} (order line items).
+ *
+ * <p>Prototype-scoped so each consumer owns its {@link Connection}, preserving the pre-Spring lifecycle.
+ */
+@Repository
+@Scope("prototype")
 public class DetallePedidoDAO {
 
     private final Connection connection;

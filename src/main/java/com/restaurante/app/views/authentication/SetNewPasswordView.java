@@ -1,7 +1,9 @@
-package main.java.com.restaurante.app.views.authentication;
+package com.restaurante.app.views.authentication;
 
 import com.formdev.flatlaf.FlatLightLaf;
-import main.java.com.restaurante.app.controllers.UsuarioController;
+import com.restaurante.app.config.SpringContext;
+import com.restaurante.app.exception.DomainException;
+import com.restaurante.app.service.UsuarioService;
 
 import javax.swing.*;
 import java.awt.*;
@@ -20,7 +22,7 @@ public class SetNewPasswordView extends BaseAuthView {
 
     @Override
     protected String getBackgroundImagePath() {
-        return "/main/resources/images/ui/imagenLoginForgotPassword.jpg";
+        return "/images/ui/imagenLoginForgotPassword.jpg";
     }
 
     @Override
@@ -79,16 +81,17 @@ public class SetNewPasswordView extends BaseAuthView {
                 JOptionPane.showMessageDialog(frame, "Las contraseñas no coinciden.");
                 return;
             }
+            UsuarioService usuarioService = SpringContext.getBean(UsuarioService.class);
             try {
-                UsuarioController controller = new UsuarioController();
-                if (controller.reestablecerContrasena(correo, nueva)) { 
-                    JOptionPane.showMessageDialog(frame, "Contraseña actualizada correctamente.");
-                } else {
-                    JOptionPane.showMessageDialog(frame, "No se pudo actualizar la contraseña. Verifica el correo.");
-                }
+                usuarioService.resetPassword(correo, nueva);
+                JOptionPane.showMessageDialog(frame, "Contraseña actualizada correctamente.");
+            } catch (DomainException dex) {
+                JOptionPane.showMessageDialog(frame, dex.getMessage());
             } catch (Exception ex) {
                 JOptionPane.showMessageDialog(frame, "Error al actualizar la contraseña: " + ex.getMessage());
                 ex.printStackTrace();
+            } finally {
+                usuarioService.close();
             }
         });
         panel.add(btnReestablecerContrasena);

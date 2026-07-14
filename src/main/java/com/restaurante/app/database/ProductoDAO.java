@@ -1,12 +1,23 @@
-package main.java.com.restaurante.app.database;
+package com.restaurante.app.database;
 
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
-import main.java.com.restaurante.app.models.Producto;
-import main.java.com.restaurante.app.models.Categoria; // Importar la clase Categoria
+import org.springframework.context.annotation.Scope;
+import org.springframework.stereotype.Repository;
 
+import com.restaurante.app.models.Producto;
+import com.restaurante.app.models.Categoria; // Importar la clase Categoria
+
+/**
+ * JDBC data-access object for {@code productos} and their categories.
+ *
+ * <p>Prototype-scoped: each consumer holds its own {@link Connection} and calls {@link #close()} when
+ * finished, preserving the pre-Spring lifecycle.
+ */
+@Repository
+@Scope("prototype")
 public class ProductoDAO {
 
     private final Connection connection;

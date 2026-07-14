@@ -1,13 +1,24 @@
 
-package main.java.com.restaurante.app.database;
+package com.restaurante.app.database;
 
-import main.java.com.restaurante.app.models.Factura;
+import com.restaurante.app.models.Factura;
 
 import java.sql.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.springframework.context.annotation.Scope;
+import org.springframework.stereotype.Repository;
+
+/**
+ * JDBC data-access object for {@code facturas} and sales statistics queries.
+ *
+ * <p>Prototype-scoped so each consumer owns its {@link Connection} and calls {@link #close()} when
+ * finished, preserving the pre-Spring lifecycle.
+ */
+@Repository
+@Scope("prototype")
 public class FacturaDAO {
 
     private final Connection connection;

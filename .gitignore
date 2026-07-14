@@ -1,1 +1,63 @@
+# ==========================================================
+#  Documentos de planificación (locales, no versionados)
+# ==========================================================
+roadmap.md
+skills.md
+
+# ==========================================================
+#  Secretos y configuración sensible
+# ==========================================================
+.env
+.env.*
+*.env
+application-local.yml
+application-local.yaml
+application-local.properties
+application-secret*.yml
+application-secret*.properties
+secrets.properties
+credentials*.json
+*.pem
+*.key
+*.keystore
+*.jks
+
+# ==========================================================
+#  Artefactos de compilación
+# ==========================================================
 /bin/
+/target/
+/build/
+/out/
+*.class
+*.jar
+*.war
+
+# Instaladores generados por jpackage
+*.msi
+*.exe
+*.dmg
+*.pkg
+/dist/
+/installer/
+
+# ==========================================================
+#  Metadatos de IDE / editores
+# ==========================================================
+.classpath
+.project
+.settings/
+.vscode/
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# ==========================================================
+#  Sistema operativo / logs / temporales
+# ==========================================================
+.DS_Store
+Thumbs.db
+*.log
+*.tmp
+*.bak

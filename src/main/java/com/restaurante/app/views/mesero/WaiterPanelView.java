@@ -1,8 +1,8 @@
-package main.java.com.restaurante.app.views.mesero;
+package com.restaurante.app.views.mesero;
 
 import com.formdev.flatlaf.FlatLightLaf;
 
-import main.java.com.restaurante.app.views.authentication.LoginView;
+import com.restaurante.app.views.authentication.LoginView;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -17,12 +17,12 @@ public class WaiterPanelView extends JFrame {
 	private final int usuarioId;
 
     private static final String[] IMAGE_PATHS = {
-            "/main/resources/images/ui/orden.png",
-            "/main/resources/images/ui/GenerarFactura.png",
-            "/main/resources/images/ui/EditarPedido.png",
-            "/main/resources/images/ui/CerrarPedido.png",
-            "/main/resources/images/ui/CancelarPedido.png",
-            "/main/resources/images/ui/PedidosEnProgreso.png"
+            "/images/ui/orden.png",
+            "/images/ui/GenerarFactura.png",
+            "/images/ui/EditarPedido.png",
+            "/images/ui/CerrarPedido.png",
+            "/images/ui/CancelarPedido.png",
+            "/images/ui/PedidosEnProgreso.png"
     };
 
     public WaiterPanelView(int usuarioId) {

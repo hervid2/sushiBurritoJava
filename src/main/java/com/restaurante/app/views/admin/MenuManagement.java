@@ -1,8 +1,9 @@
-package main.java.com.restaurante.app.views.admin;
+package com.restaurante.app.views.admin;
 
 import com.formdev.flatlaf.FlatLightLaf;
-import main.java.com.restaurante.app.controllers.ProductoController;
-import main.java.com.restaurante.app.models.Producto;
+import com.restaurante.app.config.SpringContext;
+import com.restaurante.app.service.ProductoService;
+import com.restaurante.app.models.Producto;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -21,7 +22,7 @@ public class MenuManagement extends JFrame {
 
     private JTable table;
     private JTextField searchField;
-    private ProductoController productoController;
+    private ProductoService productoService;
     private DefaultTableModel model;
     private String[] categoriasNombres; // Array de nombres de categorías para JComboBox
     private Map<Integer, String> categoriasIdNombreMap; // Mapa para obtener el nombre de la categoría por su ID
@@ -33,12 +34,12 @@ public class MenuManagement extends JFrame {
      */
     public MenuManagement() {
         try {
-            this.productoController = new ProductoController();
+            this.productoService = SpringContext.getBean(ProductoService.class);
             // Cargar los nombres de las categorías para el JComboBox (orden alfabético por el DAO)
-            this.categoriasNombres = productoController.obtenerCategorias();
+            this.categoriasNombres = productoService.obtenerCategorias();
             // Cargar los mapas para la conversión eficiente entre ID y nombre de categoría
-            this.categoriasIdNombreMap = productoController.obtenerMapaCategoriasIdNombre();
-            this.categoriasNombreIdMap = productoController.obtenerMapaCategoriasNombreId();
+            this.categoriasIdNombreMap = productoService.obtenerMapaCategoriasIdNombre();
+            this.categoriasNombreIdMap = productoService.obtenerMapaCategoriasNombreId();
         } catch (SQLException e) {
             JOptionPane.showMessageDialog(this, "Error al conectar con la base de datos o al cargar categorías: " + e.getMessage(), "Error de Conexión", JOptionPane.ERROR_MESSAGE);
             e.printStackTrace();
@@ -159,7 +160,7 @@ public class MenuManagement extends JFrame {
             @Override
             public void mouseClicked(MouseEvent e) {
                 // Navegar de vuelta al panel de administrador
-                main.java.com.restaurante.app.views.admin.AdminPanelView adminPanel = new main.java.com.restaurante.app.views.admin.AdminPanelView();
+                com.restaurante.app.views.admin.AdminPanelView adminPanel = new com.restaurante.app.views.admin.AdminPanelView();
                 adminPanel.setVisible(true);
                 dispose(); // Cierra la ventana actual
             }
@@ -285,7 +286,7 @@ public class MenuManagement extends JFrame {
                 }
                 nuevo.setCategoriaId(categoriaId);
 
-                productoController.insertar(nuevo); // Insertar el nuevo producto
+                productoService.insertar(nuevo); // Insertar el nuevo producto
                 cargarProductosEnTabla(); // Recargar la tabla para mostrar el nuevo producto
                 JOptionPane.showMessageDialog(this, "Producto agregado exitosamente.", "Éxito", JOptionPane.INFORMATION_MESSAGE);
             } catch (NumberFormatException ex) {
@@ -410,7 +411,7 @@ public class MenuManagement extends JFrame {
                 }
                 actualizado.setCategoriaId(categoriaId);
 
-                productoController.actualizar(actualizado); // Actualizar el producto
+                productoService.actualizar(actualizado); // Actualizar el producto
                 cargarProductosEnTabla(); // Recargar la tabla
                 JOptionPane.showMessageDialog(this, "Producto actualizado exitosamente.", "Éxito", JOptionPane.INFORMATION_MESSAGE);
             } catch (NumberFormatException ex) {
@@ -428,7 +429,7 @@ public class MenuManagement extends JFrame {
      */
     private void cargarProductosEnTabla() {
         try {
-            List<Producto> productos = productoController.obtenerTodos();
+            List<Producto> productos = productoService.obtenerTodos();
             model.setRowCount(0); // Limpiar los datos existentes en la tabla
             for (Producto p : productos) {
                 // Obtener el nombre de la categoría del mapa usando el ID de la categoría del producto
@@ -532,7 +533,7 @@ public class MenuManagement extends JFrame {
 
         if (confirm == JOptionPane.YES_OPTION) {
             try {
-                productoController.eliminar(productIdToDelete); // Usar el ID de producto recuperado
+                productoService.eliminar(productIdToDelete); // Usar el ID de producto recuperado
                 cargarProductosEnTabla(); // Refrescar la tabla
                 JOptionPane.showMessageDialog(this, "Producto eliminado correctamente.", "Éxito", JOptionPane.INFORMATION_MESSAGE);
             } catch (Exception e) {

@@ -1,12 +1,13 @@
-package main.java.com.restaurante.app.views.mesero;
+package com.restaurante.app.views.mesero;
 
 import com.formdev.flatlaf.FlatLightLaf;
-import main.java.com.restaurante.app.controllers.PedidoController;
-import main.java.com.restaurante.app.models.DetallePedidoDTO; // Tu DTO
-import main.java.com.restaurante.app.database.ProductoDAO; // Importar el DAO de Producto
-import main.java.com.restaurante.app.models.Producto;     // Importar el modelo Producto
-import main.java.com.restaurante.app.models.Categoria;    // Importar el modelo Categoria
-import main.java.com.restaurante.app.models.Pedido;       // Importar el modelo Pedido
+import com.restaurante.app.config.SpringContext;
+import com.restaurante.app.service.PedidoService;
+import com.restaurante.app.models.DetallePedidoDTO; // Tu DTO
+import com.restaurante.app.database.ProductoDAO; // Importar el DAO de Producto
+import com.restaurante.app.models.Producto;     // Importar el modelo Producto
+import com.restaurante.app.models.Categoria;    // Importar el modelo Categoria
+import com.restaurante.app.models.Pedido;       // Importar el modelo Pedido
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -29,7 +30,7 @@ public class GenerarComandaView extends JFrame {
     private JComboBox<Producto> comboProducto;
     private JComboBox<Categoria> comboCategoria;
     private ProductoDAO productoDAO; // Instancia del DAO
-    private PedidoController pedidoController; // Instancia del controlador de pedidos
+    private PedidoService pedidoService; // Instancia del controlador de pedidos
 
     // Mapas para almacenar productos por categoría y categorías por ID
     private Map<Integer, List<Producto>> productosPorCategoria;
@@ -39,8 +40,8 @@ public class GenerarComandaView extends JFrame {
     public GenerarComandaView(int usuarioId) {
         this.usuarioId = usuarioId;
         try {
-            this.productoDAO = new ProductoDAO(); // Inicializar el DAO de productos
-            this.pedidoController = new PedidoController(); // Inicializar el controlador de pedidos
+            this.productoDAO = SpringContext.getBean(ProductoDAO.class); // Obtener el DAO de productos del contexto
+            this.pedidoService = SpringContext.getBean(PedidoService.class); // Obtener el controlador de pedidos del contexto
             loadProductosAndCategorias(); // Cargar los datos de la DB al iniciar la vista
         } catch (SQLException e) {
             JOptionPane.showMessageDialog(this, "Error al conectar o cargar datos del menú desde la base de datos: " + e.getMessage(), "Error de DB", JOptionPane.ERROR_MESSAGE);
@@ -55,8 +56,8 @@ public class GenerarComandaView extends JFrame {
                 if (productoDAO != null) {
                     productoDAO.close();
                 }
-                if (pedidoController != null) {
-                    pedidoController.closeDAOs(); // Asegúrate de tener este método en tu PedidoController
+                if (pedidoService != null) {
+                    pedidoService.close();
                 }
             }
         });
@@ -313,7 +314,7 @@ public class GenerarComandaView extends JFrame {
 
                     // Llama al controlador con todos los argumentos necesarios
                     // Asumiendo que crearPedido es el método del controlador que envuelve el DAO
-                    pedidoController.crearPedido(nuevoPedido, detalles, productosResumen.toString(), categoriasResumenStr);
+                    pedidoService.crearPedido(nuevoPedido, detalles, productosResumen.toString(), categoriasResumenStr);
 
                     JOptionPane.showMessageDialog(this, "¡La comanda fue generada con éxito!", "Comanda Creada", JOptionPane.INFORMATION_MESSAGE);
                     tableModel.setRowCount(0); // Limpiar la tabla de resumen

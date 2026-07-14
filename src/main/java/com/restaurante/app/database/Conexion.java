@@ -1,4 +1,4 @@
-package main.java.com.restaurante.app.database;
+package com.restaurante.app.database;
 
 import java.sql.Connection;
 import java.sql.DriverManager;

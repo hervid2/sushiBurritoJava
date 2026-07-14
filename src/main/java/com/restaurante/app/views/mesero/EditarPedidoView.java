@@ -1,14 +1,14 @@
-package main.java.com.restaurante.app.views.mesero;
+package com.restaurante.app.views.mesero;
 
 import com.formdev.flatlaf.FlatLightLaf;
-import main.java.com.restaurante.app.controllers.PedidoController; // Usaremos PedidoController para la lógica de negocio
-import main.java.com.restaurante.app.database.PedidoDAO; // Necesario para cerrar la conexión al final, aunque la lógica la maneja Controller
-import main.java.com.restaurante.app.database.ProductoDAO; // Necesario para cerrar la conexión al final
-import main.java.com.restaurante.app.models.Categoria;
-import main.java.com.restaurante.app.models.DetallePedido;
-import main.java.com.restaurante.app.models.DetallePedidoDTO; // Importar DetallePedidoDTO
-import main.java.com.restaurante.app.models.Pedido;
-import main.java.com.restaurante.app.models.Producto;
+import com.restaurante.app.config.SpringContext;
+import com.restaurante.app.service.PedidoService;
+import com.restaurante.app.database.ProductoDAO; // Used directly to load products/categories for the combo boxes
+import com.restaurante.app.models.Categoria;
+import com.restaurante.app.models.DetallePedido;
+import com.restaurante.app.models.DetallePedidoDTO; // Importar DetallePedidoDTO
+import com.restaurante.app.models.Pedido;
+import com.restaurante.app.models.Producto;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -37,7 +37,7 @@ public class EditarPedidoView extends JFrame {
     private JComboBox<String> comboMesaPedido;
     private JComboBox<String> comboEstadoPedido;
 
-    private PedidoController pedidoController; // Usaremos el controlador para toda la lógica de DB
+    private PedidoService pedidoService; // Usaremos el controlador para toda la lógica de DB
     private ProductoDAO productoDAO; // Mantener para cargar productos/categorías iniciales y para obtener objetos Producto/Categoria
 
     // Mapas para productos y categorías
@@ -52,8 +52,8 @@ public class EditarPedidoView extends JFrame {
     public EditarPedidoView(int usuarioId) {
         this.usuarioId = usuarioId;
         try {
-            this.pedidoController = new PedidoController(); // Inicializar el controlador
-            this.productoDAO = new ProductoDAO(); // Se mantiene para la carga inicial de datos y obtener productos/categorias por ID
+            this.pedidoService = SpringContext.getBean(PedidoService.class); // Obtener el controlador del contexto
+            this.productoDAO = SpringContext.getBean(ProductoDAO.class); // Se mantiene para la carga inicial de datos y obtener productos/categorias por ID
             loadProductosAndCategorias();
         } catch (SQLException e) {
             JOptionPane.showMessageDialog(this, "Error al conectar o cargar datos iniciales: " + e.getMessage(), "Error de DB", JOptionPane.ERROR_MESSAGE);
@@ -65,8 +65,8 @@ public class EditarPedidoView extends JFrame {
         this.addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosing(WindowEvent windowEvent) {
-                if (pedidoController != null) {
-                    pedidoController.closeDAOs(); // Cerrar los DAOs a través del controlador
+                if (pedidoService != null) {
+                    pedidoService.close();
                 }
                 // Si productoDAO se inicializó directamente aquí y no a través del controlador, también cerrarlo
                 if (productoDAO != null) {
@@ -102,7 +102,7 @@ public class EditarPedidoView extends JFrame {
     private void loadPedidos() {
         try {
             // Usa el controlador para obtener la lista de pedidos
-            List<Pedido> pedidos = pedidoController.obtenerTodosLosPedidos(); // Asumiendo que existe este método en PedidoController
+            List<Pedido> pedidos = pedidoService.obtenerTodosLosPedidos(); // Asumiendo que existe este método en PedidoService
             comboPedidos.removeAllItems();
             for (Pedido p : pedidos) {
                 comboPedidos.addItem(p);
@@ -123,7 +123,7 @@ public class EditarPedidoView extends JFrame {
 
         try {
             // Usa el controlador para obtener los detalles del pedido
-            List<DetallePedido> detalles = pedidoController.obtenerDetallesPorPedidoId(pedido.getPedidoId());
+            List<DetallePedido> detalles = pedidoService.obtenerDetallesPorPedidoId(pedido.getPedidoId());
 
             // Setear la mesa y el estado del pedido principal
             comboMesaPedido.setSelectedItem(String.valueOf(pedido.getMesa()));
@@ -481,7 +481,7 @@ public class EditarPedidoView extends JFrame {
                     selectedPedido.setEstado((String)comboEstadoPedido.getSelectedItem());
                     // selectedPedido.setUsuarioId(usuarioId); // Mantener el usuario original o actualizar si aplica
 
-                    List<DetallePedidoDTO> detallesParaActualizarController = new ArrayList<>();
+                    List<DetallePedidoDTO> detallesParaActualizar = new ArrayList<>();
                     // Generar DetallePedidoDTOs para el controlador
                     for (int i = 0; i < tableModel.getRowCount(); i++) {
                         int productoId = (int) tableModel.getValueAt(i, COL_PRODUCTO_ID);
@@ -489,12 +489,12 @@ public class EditarPedidoView extends JFrame {
                         String notas = (String) tableModel.getValueAt(i, 3);
 
                         DetallePedidoDTO dto = new DetallePedidoDTO(productoId, cantidad, notas);
-                        detallesParaActualizarController.add(dto);
+                        detallesParaActualizar.add(dto);
                     }
 
                     // Llama al controlador para actualizar el pedido y sus detalles.
                     // El controlador se encargará de generar los resúmenes y llamar al DAO.
-                    pedidoController.actualizarPedido(selectedPedido, detallesParaActualizarController);
+                    pedidoService.actualizarPedido(selectedPedido, detallesParaActualizar);
 
                     JOptionPane.showMessageDialog(this, "¡Cambios guardados correctamente!", "Éxito", JOptionPane.INFORMATION_MESSAGE);
                     loadPedidos(); // Recargar la lista de pedidos (por si cambió el estado o mesa)
@@ -547,8 +547,8 @@ public class EditarPedidoView extends JFrame {
 
     // Método para obtener todos los pedidos (necesario para el JComboBox de pedidos)
     // Este método lo he añadido temporalmente aquí para que el comboPedidos funcione.
-    // Idealmente, se debería tener un método en PedidoController para obtener todos los pedidos.
+    // Idealmente, se debería tener un método en PedidoService para obtener todos los pedidos.
     // Si ya lo tienes, puedes borrar este y usar el del controlador.
-    // (Por ejemplo, si PedidoController tiene un 'obtenerTodosLosPedidos()', úsalo en loadPedidos()).
+    // (Por ejemplo, si PedidoService tiene un 'obtenerTodosLosPedidos()', úsalo en loadPedidos()).
     // Ya lo tienes, así que lo haré que use el controlador.
 }

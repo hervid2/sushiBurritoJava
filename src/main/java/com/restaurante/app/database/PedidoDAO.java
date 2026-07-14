@@ -1,7 +1,7 @@
-package main.java.com.restaurante.app.database;
+package com.restaurante.app.database;
 
-import main.java.com.restaurante.app.models.Pedido;
-import main.java.com.restaurante.app.models.DetallePedido;
+import com.restaurante.app.models.Pedido;
+import com.restaurante.app.models.DetallePedido;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -12,6 +12,17 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.springframework.context.annotation.Scope;
+import org.springframework.stereotype.Repository;
+
+/**
+ * JDBC data-access object for {@code pedidos} and their line items.
+ *
+ * <p>Prototype-scoped: every consumer gets its own instance and {@link Connection}, and is expected to
+ * call {@link #close()} when done, preserving the pre-Spring lifecycle.
+ */
+@Repository
+@Scope("prototype")
 public class PedidoDAO {
 
     private final Connection connection;

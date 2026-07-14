@@ -1,4 +1,4 @@
-package main.java.com.restaurante.app.models;
+package com.restaurante.app.models;
 
 import java.sql.Timestamp;
 import java.time.LocalDateTime; // Importar para horaEntrada

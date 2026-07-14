@@ -1,8 +1,8 @@
-package main.java.com.restaurante.app.views.admin;
+package com.restaurante.app.views.admin;
 
 import com.formdev.flatlaf.FlatLightLaf;
-import main.java.com.restaurante.app.views.admin.UsersManagement;
-import main.java.com.restaurante.app.views.authentication.LoginView;
+import com.restaurante.app.views.admin.UsersManagement;
+import com.restaurante.app.views.authentication.LoginView;
 
 import javax.swing.*;
 import java.awt.*;
@@ -14,9 +14,9 @@ public class AdminPanelView extends JFrame {
     
     // Ruta de las imágenes
     private static final String[] IMAGE_PATHS = {
-        "/main/resources/images/ui/GestionUsuarios.png",
-        "/main/resources/images/ui/GestionCarta.png",
-        "/main/resources/images/ui/Estadisticas.png"
+        "/images/ui/GestionUsuarios.png",
+        "/images/ui/GestionCarta.png",
+        "/images/ui/Estadisticas.png"
     };
     
     public AdminPanelView() {

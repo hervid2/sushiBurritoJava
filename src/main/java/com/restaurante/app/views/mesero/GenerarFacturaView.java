@@ -1,13 +1,14 @@
-package main.java.com.restaurante.app.views.mesero;
+package com.restaurante.app.views.mesero;
 
 import com.formdev.flatlaf.FlatLightLaf;
-import main.java.com.restaurante.app.database.FacturaDAO;
-import main.java.com.restaurante.app.database.PedidoDAO;
-import main.java.com.restaurante.app.database.ProductoDAO;
-import main.java.com.restaurante.app.models.DetallePedido;
-import main.java.com.restaurante.app.models.Factura; 
-import main.java.com.restaurante.app.models.Pedido;
-import main.java.com.restaurante.app.models.Producto;
+import com.restaurante.app.config.SpringContext;
+import com.restaurante.app.service.FacturaService;
+import com.restaurante.app.database.PedidoDAO;
+import com.restaurante.app.database.ProductoDAO;
+import com.restaurante.app.models.DetallePedido;
+import com.restaurante.app.models.Factura; 
+import com.restaurante.app.models.Pedido;
+import com.restaurante.app.models.Producto;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -35,7 +36,7 @@ public class GenerarFacturaView extends JFrame {
 
     private PedidoDAO pedidoDAO;
     private ProductoDAO productoDAO;
-    private FacturaDAO facturaDAO;
+    private FacturaService facturaService;
     private Map<Integer, Pedido> pedidosDisponibles;
     private DecimalFormat df;
     private int usuarioId;
@@ -49,11 +50,11 @@ public class GenerarFacturaView extends JFrame {
         df = new DecimalFormat("#,##0.00");
 
         try {
-            pedidoDAO = new PedidoDAO();
-            productoDAO = new ProductoDAO();
-            facturaDAO = new FacturaDAO();
+            pedidoDAO = SpringContext.getBean(PedidoDAO.class);
+            productoDAO = SpringContext.getBean(ProductoDAO.class);
+            facturaService = SpringContext.getBean(FacturaService.class);
             pedidosDisponibles = new HashMap<>();
-        } catch (SQLException e) {
+        } catch (Exception e) {
             JOptionPane.showMessageDialog(this, "Error al conectar con la base de datos: " + e.getMessage(), "Error de DB", JOptionPane.ERROR_MESSAGE);
             e.printStackTrace();
             // Considerar si es necesario cerrar la aplicación o deshabilitar funciones
@@ -66,7 +67,7 @@ public class GenerarFacturaView extends JFrame {
             public void windowClosing(WindowEvent windowEvent) {
                 if (pedidoDAO != null) pedidoDAO.close();
                 if (productoDAO != null) productoDAO.close();
-                if (facturaDAO != null) facturaDAO.close();
+                if (facturaService != null) facturaService.close();
             }
         });
     }
@@ -368,7 +369,7 @@ public class GenerarFacturaView extends JFrame {
             factura.setFechaFactura(LocalDateTime.now()); // Establecer la fecha actual
 
             // Insertar factura en la DB
-            facturaDAO.insertarFactura(factura); // Tu DAO no devuelve el ID, lo inserta.
+            facturaService.insertarFactura(factura); // Tu DAO no devuelve el ID, lo inserta.
 
             // Actualizar estado del pedido a "pagado"
             pedidoDAO.actualizarEstadoPedido(selectedPedido.getPedidoId(), "pagado");

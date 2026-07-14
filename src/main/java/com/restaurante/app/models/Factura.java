@@ -1,5 +1,5 @@
 
-package main.java.com.restaurante.app.models;
+package com.restaurante.app.models;
 
 import java.time.LocalDateTime;
 

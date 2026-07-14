@@ -1,4 +1,4 @@
-package main.java.com.restaurante.app.database;
+package com.restaurante.app.database;
 
 import java.sql.*;
 import java.util.ArrayList;
@@ -6,8 +6,16 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import main.java.com.restaurante.app.database.Conexion;
+import org.springframework.context.annotation.Scope;
+import org.springframework.stereotype.Repository;
 
+/**
+ * JDBC data-access object for {@code categorias}.
+ *
+ * <p>Prototype-scoped so each consumer owns its {@link Connection}, preserving the pre-Spring lifecycle.
+ */
+@Repository
+@Scope("prototype")
 public class CategoriaDAO {
 
     private final Connection connection;

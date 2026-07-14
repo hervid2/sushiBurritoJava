@@ -1,4 +1,4 @@
-package main.java.com.restaurante.app.models;
+package com.restaurante.app.models;
 
 public class EstadisticaProductoDTO {
     private String nombreProducto;

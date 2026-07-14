@@ -1,10 +1,22 @@
-package main.java.com.restaurante.app.database;
+package com.restaurante.app.database;
 
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
-import main.java.com.restaurante.app.models.Usuario;
 
+import org.springframework.context.annotation.Scope;
+import org.springframework.stereotype.Repository;
+
+import com.restaurante.app.models.Usuario;
+
+/**
+ * JDBC data-access object for {@code usuarios}.
+ *
+ * <p>Declared as a prototype bean: each injection point receives its own instance holding a dedicated
+ * {@link Connection}, matching the pre-Spring lifecycle. Persistence moves to Spring Data JPA later.
+ */
+@Repository
+@Scope("prototype")
 public class UsuarioDAO {
 
     private final Connection connection;
@@ -12,6 +24,21 @@ public class UsuarioDAO {
     public UsuarioDAO() throws SQLException {
         // Usar tu clase de conexión existente 'Conexion'
         this.connection = Conexion.getConnection();
+    }
+
+    /**
+     * Closes the underlying JDBC connection, releasing the resource for this prototype instance.
+     */
+    public void close() {
+        try {
+            if (connection != null && !connection.isClosed()) {
+                connection.close();
+                System.out.println("Conexión de UsuarioDAO cerrada.");
+            }
+        } catch (SQLException e) {
+            System.err.println("Error al cerrar la conexión de UsuarioDAO: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 
     public boolean insertar(Usuario usuario) throws SQLException {

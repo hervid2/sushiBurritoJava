@@ -1,4 +1,4 @@
-package main.java.com.restaurante.app.models;
+package com.restaurante.app.models;
 
 // Asegúrate de tener todas las importaciones necesarias si hay más atributos
 // Por ejemplo, si usas LocalDateTime: import java.time.LocalDateTime;
