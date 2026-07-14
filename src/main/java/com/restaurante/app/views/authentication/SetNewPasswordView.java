@@ -3,7 +3,7 @@ package com.restaurante.app.views.authentication;
 import com.formdev.flatlaf.FlatLightLaf;
 import com.restaurante.app.config.SpringContext;
 import com.restaurante.app.exception.DomainException;
-import com.restaurante.app.service.UsuarioService;
+import com.restaurante.app.service.UserService;
 
 import javax.swing.*;
 import java.awt.*;
@@ -81,17 +81,15 @@ public class SetNewPasswordView extends BaseAuthView {
                 JOptionPane.showMessageDialog(frame, "Las contraseñas no coinciden.");
                 return;
             }
-            UsuarioService usuarioService = SpringContext.getBean(UsuarioService.class);
+            UserService userService = SpringContext.getBean(UserService.class);
             try {
-                usuarioService.resetPassword(correo, nueva);
+                userService.resetPassword(correo, nueva);
                 JOptionPane.showMessageDialog(frame, "Contraseña actualizada correctamente.");
             } catch (DomainException dex) {
                 JOptionPane.showMessageDialog(frame, dex.getMessage());
             } catch (Exception ex) {
                 JOptionPane.showMessageDialog(frame, "Error al actualizar la contraseña: " + ex.getMessage());
                 ex.printStackTrace();
-            } finally {
-                usuarioService.close();
             }
         });
         panel.add(btnReestablecerContrasena);

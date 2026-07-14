@@ -2,65 +2,52 @@ package com.restaurante.app.views.mesero;
 
 import com.formdev.flatlaf.FlatLightLaf;
 import com.restaurante.app.config.SpringContext;
-import com.restaurante.app.database.PedidoDAO;
-import com.restaurante.app.models.Pedido;
+import com.restaurante.app.models.Order;
+import com.restaurante.app.service.OrderService;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
-import java.awt.event.WindowAdapter;
-import java.awt.event.WindowEvent;
-import java.sql.SQLException;
 import java.util.List;
 
 public class CerrarPedidosView extends JFrame {
 
     private JTable pedidosTable;
     private DefaultTableModel pedidosModel;
-    private PedidoDAO pedidoDAO;
+    private OrderService orderService;
     private int usuarioId; // Para volver al panel del mesero con el ID correcto
 
     public CerrarPedidosView(int usuarioId) { // Añadir usuarioId al constructor
         this.usuarioId = usuarioId;
         try {
-            pedidoDAO = SpringContext.getBean(PedidoDAO.class);
+            orderService = SpringContext.getBean(OrderService.class);
         } catch (Exception e) {
             JOptionPane.showMessageDialog(this, "Error al conectar con la base de datos: " + e.getMessage(), "Error de DB", JOptionPane.ERROR_MESSAGE);
             e.printStackTrace();
         }
         setupUI();
         loadPedidosParaCerrar(); // Cargar pedidos al inicio
-
-        // Asegurarse de cerrar la conexión al cerrar la ventana
-        this.addWindowListener(new WindowAdapter() {
-            @Override
-            public void windowClosing(WindowEvent windowEvent) {
-                if (pedidoDAO != null) {
-                    pedidoDAO.close();
-                }
-            }
-        });
     }
 
     private void loadPedidosParaCerrar() {
         pedidosModel.setRowCount(0); // Limpiar tabla
         try {
             // Obtener pedidos que pueden ser cerrados/pagados (ej. Preparando o Entregado)
-            List<Pedido> pedidosPreparando = pedidoDAO.obtenerPedidosPorEstado("preparando");
-            List<Pedido> pedidosEntregados = pedidoDAO.obtenerPedidosPorEstado("entregado");
+            List<Order> pedidosPreparando = orderService.findOrdersByStatus("preparando");
+            List<Order> pedidosEntregados = orderService.findOrdersByStatus("entregado");
 
             // Combinar y mostrar en la tabla
-            for (Pedido p : pedidosPreparando) {
-            	String productosResumen = p.getProductosResumen();
-                pedidosModel.addRow(new Object[]{p.getPedidoId(), p.getMesa(), productosResumen, p.getEstado()});
+            for (Order p : pedidosPreparando) {
+            	String productosResumen = p.getProductSummary();
+                pedidosModel.addRow(new Object[]{p.getId(), p.getTableNumber(), productosResumen, p.getStatus()});
             }
-            for (Pedido p : pedidosEntregados) {
-            	String productosResumen = p.getProductosResumen();
-                pedidosModel.addRow(new Object[]{p.getPedidoId(), p.getMesa(), productosResumen, p.getEstado()});
+            for (Order p : pedidosEntregados) {
+            	String productosResumen = p.getProductSummary();
+                pedidosModel.addRow(new Object[]{p.getId(), p.getTableNumber(), productosResumen, p.getStatus()});
             }
 
-        } catch (SQLException e) {
+        } catch (RuntimeException e) {
             JOptionPane.showMessageDialog(this, "Error al cargar pedidos para cerrar: " + e.getMessage(), "Error de DB", JOptionPane.ERROR_MESSAGE);
             e.printStackTrace();
         }
@@ -134,10 +121,10 @@ public class CerrarPedidosView extends JFrame {
                     int confirm = JOptionPane.showConfirmDialog(this, "¿Confirmar pago para Pedido #" + pedidoId + "?", "Confirmar Pago", JOptionPane.YES_NO_OPTION);
                     if (confirm == JOptionPane.YES_OPTION) {
                         try {
-                            pedidoDAO.actualizarEstadoPedido(pedidoId, "pagado");
+                            orderService.updateStatus(pedidoId, "pagado");
                             JOptionPane.showMessageDialog(this, "Pedido #" + pedidoId + " marcado como pagado.");
                             loadPedidosParaCerrar(); // Recargar la tabla
-                        } catch (SQLException ex) {
+                        } catch (RuntimeException ex) {
                             JOptionPane.showMessageDialog(this, "Error al marcar pedido como pagado en la DB: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
                             ex.printStackTrace();
                         }
@@ -161,10 +148,10 @@ public class CerrarPedidosView extends JFrame {
                     int confirm = JOptionPane.showConfirmDialog(this, "¿Marcar Pedido #" + pedidoId + " como entregado?", "Confirmar Entrega", JOptionPane.YES_NO_OPTION);
                     if (confirm == JOptionPane.YES_OPTION) {
                         try {
-                            pedidoDAO.actualizarEstadoPedido(pedidoId, "entregado");
+                            orderService.updateStatus(pedidoId, "entregado");
                             JOptionPane.showMessageDialog(this, "Pedido #" + pedidoId + " marcado como entregado.");
                             loadPedidosParaCerrar(); // Recargar la tabla
-                        } catch (SQLException ex) {
+                        } catch (RuntimeException ex) {
                             JOptionPane.showMessageDialog(this, "Error al marcar pedido como entregado en la DB: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
                             ex.printStackTrace();
                         }

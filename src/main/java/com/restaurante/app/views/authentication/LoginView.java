@@ -3,15 +3,14 @@ package com.restaurante.app.views.authentication;
 import com.formdev.flatlaf.FlatLightLaf;
 import com.restaurante.app.config.SpringContext;
 import com.restaurante.app.exception.DomainException;
-import com.restaurante.app.models.Usuario;
+import com.restaurante.app.models.User;
 import com.restaurante.app.navigation.NavigationManager;
-import com.restaurante.app.service.UsuarioService;
+import com.restaurante.app.service.UserService;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.sql.SQLException;
 import java.util.regex.Pattern;
 
 public class LoginView extends BaseAuthView {
@@ -126,18 +125,16 @@ public class LoginView extends BaseAuthView {
                 return;
             }
 
-            UsuarioService usuarioService = SpringContext.getBean(UsuarioService.class);
+            UserService userService = SpringContext.getBean(UserService.class);
             try {
-                Usuario usuario = usuarioService.authenticate(correo, contrasena);
+                User user = userService.authenticate(correo, contrasena);
                 frame.dispose();
-                SpringContext.getBean(NavigationManager.class).openHomeFor(usuario);
+                SpringContext.getBean(NavigationManager.class).openHomeFor(user);
             } catch (DomainException ex) {
                 JOptionPane.showMessageDialog(frame, ex.getMessage());
-            } catch (SQLException ex) {
+            } catch (RuntimeException ex) {
                 JOptionPane.showMessageDialog(frame, "Error de conexión a base de datos: " + ex.getMessage());
                 ex.printStackTrace();
-            } finally {
-                usuarioService.close();
             }
         });
         panel.add(btnIngresar);

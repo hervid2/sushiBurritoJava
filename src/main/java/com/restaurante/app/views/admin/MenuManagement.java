@@ -2,8 +2,8 @@ package com.restaurante.app.views.admin;
 
 import com.formdev.flatlaf.FlatLightLaf;
 import com.restaurante.app.config.SpringContext;
-import com.restaurante.app.service.ProductoService;
-import com.restaurante.app.models.Producto;
+import com.restaurante.app.service.ProductService;
+import com.restaurante.app.models.Product;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -12,7 +12,6 @@ import javax.swing.table.TableRowSorter;
 
 import java.awt.*;
 import java.awt.event.*;
-import java.sql.SQLException;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map; // Importar Map
@@ -22,7 +21,7 @@ public class MenuManagement extends JFrame {
 
     private JTable table;
     private JTextField searchField;
-    private ProductoService productoService;
+    private ProductService productService;
     private DefaultTableModel model;
     private String[] categoriasNombres; // Array de nombres de categorías para JComboBox
     private Map<Integer, String> categoriasIdNombreMap; // Mapa para obtener el nombre de la categoría por su ID
@@ -34,13 +33,13 @@ public class MenuManagement extends JFrame {
      */
     public MenuManagement() {
         try {
-            this.productoService = SpringContext.getBean(ProductoService.class);
-            // Cargar los nombres de las categorías para el JComboBox (orden alfabético por el DAO)
-            this.categoriasNombres = productoService.obtenerCategorias();
+            this.productService = SpringContext.getBean(ProductService.class);
+            // Cargar los nombres de las categorías para el JComboBox (orden alfabético)
+            this.categoriasNombres = productService.getCategoryNames();
             // Cargar los mapas para la conversión eficiente entre ID y nombre de categoría
-            this.categoriasIdNombreMap = productoService.obtenerMapaCategoriasIdNombre();
-            this.categoriasNombreIdMap = productoService.obtenerMapaCategoriasNombreId();
-        } catch (SQLException e) {
+            this.categoriasIdNombreMap = productService.getCategoryIdToNameMap();
+            this.categoriasNombreIdMap = productService.getCategoryNameToIdMap();
+        } catch (RuntimeException e) {
             JOptionPane.showMessageDialog(this, "Error al conectar con la base de datos o al cargar categorías: " + e.getMessage(), "Error de Conexión", JOptionPane.ERROR_MESSAGE);
             e.printStackTrace();
             // Si hay un error de conexión, se puede optar por salir de la aplicación o deshabilitar funcionalidades
@@ -267,26 +266,26 @@ public class MenuManagement extends JFrame {
                     return;
                 }
 
-                Producto nuevo = new Producto();
-                nuevo.setNombre(nombre.getText().trim());
-                nuevo.setIngredientes(ingredientes.getText().trim());
-                nuevo.setValorNeto(neto);
+                Product nuevo = new Product();
+                nuevo.setName(nombre.getText().trim());
+                nuevo.setIngredients(ingredientes.getText().trim());
+                nuevo.setNetPrice(neto);
 
                 double impuestoCalculado = neto * 0.08;
                 double valorVentaCalculado = neto + impuestoCalculado;
 
-                nuevo.setImpuesto(impuestoCalculado);
-                nuevo.setValorVenta(valorVentaCalculado);
+                nuevo.setTax(impuestoCalculado);
+                nuevo.setSalePrice(valorVentaCalculado);
 
                 // Obtener el ID de la categoría del mapa usando el nombre seleccionado
                 String selectedCategoryName = (String) categoriaBox.getSelectedItem();
                 Integer categoriaId = categoriasNombreIdMap.get(selectedCategoryName);
                 if (categoriaId == null) {
-                    throw new SQLException("Categoría seleccionada no encontrada en el mapa: " + selectedCategoryName);
+                    throw new IllegalStateException("Categoría seleccionada no encontrada en el mapa: " + selectedCategoryName);
                 }
-                nuevo.setCategoriaId(categoriaId);
+                nuevo.setCategoryId(categoriaId);
 
-                productoService.insertar(nuevo); // Insertar el nuevo producto
+                productService.insert(nuevo); // Insertar el nuevo producto
                 cargarProductosEnTabla(); // Recargar la tabla para mostrar el nuevo producto
                 JOptionPane.showMessageDialog(this, "Producto agregado exitosamente.", "Éxito", JOptionPane.INFORMATION_MESSAGE);
             } catch (NumberFormatException ex) {
@@ -391,27 +390,27 @@ public class MenuManagement extends JFrame {
                     return;
                 }
 
-                Producto actualizado = new Producto();
+                Product actualizado = new Product();
                 actualizado.setId(productoId); // Establecer el ID real del producto para la operación de actualización
-                actualizado.setNombre(nombre.getText().trim());
-                actualizado.setIngredientes(ingredientes.getText().trim());
-                actualizado.setValorNeto(neto);
+                actualizado.setName(nombre.getText().trim());
+                actualizado.setIngredients(ingredientes.getText().trim());
+                actualizado.setNetPrice(neto);
 
                 double impuestoCalculado = neto * 0.08;
                 double valorVentaCalculado = neto + impuestoCalculado;
 
-                actualizado.setImpuesto(impuestoCalculado);
-                actualizado.setValorVenta(valorVentaCalculado);
+                actualizado.setTax(impuestoCalculado);
+                actualizado.setSalePrice(valorVentaCalculado);
 
                 // Obtener el ID de la categoría del mapa usando el nombre seleccionado
                 String selectedCategoryName = (String) categoriaBox.getSelectedItem();
                 Integer categoriaId = categoriasNombreIdMap.get(selectedCategoryName);
                 if (categoriaId == null) {
-                    throw new SQLException("Categoría seleccionada no encontrada en el mapa: " + selectedCategoryName);
+                    throw new IllegalStateException("Categoría seleccionada no encontrada en el mapa: " + selectedCategoryName);
                 }
-                actualizado.setCategoriaId(categoriaId);
+                actualizado.setCategoryId(categoriaId);
 
-                productoService.actualizar(actualizado); // Actualizar el producto
+                productService.update(actualizado); // Actualizar el producto
                 cargarProductosEnTabla(); // Recargar la tabla
                 JOptionPane.showMessageDialog(this, "Producto actualizado exitosamente.", "Éxito", JOptionPane.INFORMATION_MESSAGE);
             } catch (NumberFormatException ex) {
@@ -429,23 +428,23 @@ public class MenuManagement extends JFrame {
      */
     private void cargarProductosEnTabla() {
         try {
-            List<Producto> productos = productoService.obtenerTodos();
+            List<Product> productos = productService.findAll();
             model.setRowCount(0); // Limpiar los datos existentes en la tabla
-            for (Producto p : productos) {
+            for (Product p : productos) {
                 // Obtener el nombre de la categoría del mapa usando el ID de la categoría del producto
-                String categoriaNombre = categoriasIdNombreMap.getOrDefault(p.getCategoriaId(), "Desconocida");
+                String categoriaNombre = categoriasIdNombreMap.getOrDefault(p.getCategoryId(), "Desconocida");
 
                 model.addRow(new Object[]{
                     p.getId(), // Añadir el ID del producto como el primer elemento (columna oculta)
-                    p.getNombre(),
-                    p.getIngredientes(),
-                    String.format(Locale.US, "%.2f", p.getValorNeto()), // Formatear para mostrar
-                    String.format(Locale.US, "%.2f", p.getImpuesto()), // Formatear para mostrar
-                    String.format(Locale.US, "%.2f", p.getValorVenta()), // Formatear para mostrar
+                    p.getName(),
+                    p.getIngredients(),
+                    String.format(Locale.US, "%.2f", p.getNetPrice()), // Formatear para mostrar
+                    String.format(Locale.US, "%.2f", p.getTax()), // Formatear para mostrar
+                    String.format(Locale.US, "%.2f", p.getSalePrice()), // Formatear para mostrar
                     categoriaNombre // Usar el nombre de categoría obtenido del mapa
                 });
             }
-        } catch (SQLException e) {
+        } catch (RuntimeException e) {
             JOptionPane.showMessageDialog(this, "Error al cargar productos: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
             e.printStackTrace();
         }
@@ -533,7 +532,7 @@ public class MenuManagement extends JFrame {
 
         if (confirm == JOptionPane.YES_OPTION) {
             try {
-                productoService.eliminar(productIdToDelete); // Usar el ID de producto recuperado
+                productService.delete(productIdToDelete); // Usar el ID de producto recuperado
                 cargarProductosEnTabla(); // Refrescar la tabla
                 JOptionPane.showMessageDialog(this, "Producto eliminado correctamente.", "Éxito", JOptionPane.INFORMATION_MESSAGE);
             } catch (Exception e) {

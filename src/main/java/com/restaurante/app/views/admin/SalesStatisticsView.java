@@ -3,9 +3,9 @@ package com.restaurante.app.views.admin;
 import com.formdev.flatlaf.FlatLightLaf;
 import com.toedter.calendar.JDateChooser;
 import com.restaurante.app.config.SpringContext;
-import com.restaurante.app.service.EstadisticaService;
-import com.restaurante.app.models.EstadisticaProductoDTO;
-import com.restaurante.app.models.Factura;
+import com.restaurante.app.service.StatisticsService;
+import com.restaurante.app.models.ProductSalesDTO;
+import com.restaurante.app.models.Invoice;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
@@ -22,7 +22,6 @@ import java.awt.event.MouseEvent;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Date;
@@ -161,31 +160,26 @@ public class SalesStatisticsView extends JFrame {
                 LocalDateTime desdeLdt = desde.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
                 LocalDateTime hastaLdt = hasta.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
 
-                EstadisticaService estadisticaService = SpringContext.getBean(EstadisticaService.class);
-                Map<String, Object> datos;
-                try {
-                    datos = estadisticaService.generarEstadisticas(desdeLdt, hastaLdt);
-                } finally {
-                    estadisticaService.close();
-                }
+                StatisticsService statisticsService = SpringContext.getBean(StatisticsService.class);
+                Map<String, Object> datos = statisticsService.generateStatistics(desdeLdt, hastaLdt);
 
-                List<Factura> facturas = (List<Factura>) datos.get("facturas");
+                List<Invoice> facturas = (List<Invoice>) datos.get("facturas");
                 DefaultTableModel model = (DefaultTableModel) salesTable.getModel();
                 model.setRowCount(0);
 
-                for (Factura f : facturas) {
+                for (Invoice f : facturas) {
                     model.addRow(new Object[]{
-                            f.getFechaFactura().toLocalDate().toString(),
-                            "Pedido ID: " + f.getPedidoId(),
+                            f.getInvoicedAt().toLocalDate().toString(),
+                            "Pedido ID: " + f.getOrderId(),
                             "$" + String.format("%.2f", f.getTotal())
                     });
                 }
 
-                masVendidoLabel.setText("Producto más vendido: " + ((EstadisticaProductoDTO) datos.get("masVendido")).getNombreProducto());
-                menosVendidoLabel.setText("Producto menos vendido: " + ((EstadisticaProductoDTO) datos.get("menosVendido")).getNombreProducto());
+                masVendidoLabel.setText("Producto más vendido: " + ((ProductSalesDTO) datos.get("masVendido")).getProductName());
+                menosVendidoLabel.setText("Producto menos vendido: " + ((ProductSalesDTO) datos.get("menosVendido")).getProductName());
                 totalIngresosLabel.setText("Total ingresos: $" + String.format("%.2f", (double) datos.get("totalIngresos")));
 
-            } catch (SQLException ex) {
+            } catch (RuntimeException ex) {
                 JOptionPane.showMessageDialog(this, "Error al obtener estadísticas: " + ex.getMessage());
                 ex.printStackTrace();
             }

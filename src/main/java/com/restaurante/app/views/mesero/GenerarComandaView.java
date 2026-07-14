@@ -2,19 +2,17 @@ package com.restaurante.app.views.mesero;
 
 import com.formdev.flatlaf.FlatLightLaf;
 import com.restaurante.app.config.SpringContext;
-import com.restaurante.app.service.PedidoService;
-import com.restaurante.app.models.DetallePedidoDTO; // Tu DTO
-import com.restaurante.app.database.ProductoDAO; // Importar el DAO de Producto
-import com.restaurante.app.models.Producto;     // Importar el modelo Producto
-import com.restaurante.app.models.Categoria;    // Importar el modelo Categoria
-import com.restaurante.app.models.Pedido;       // Importar el modelo Pedido
+import com.restaurante.app.service.OrderService;
+import com.restaurante.app.service.ProductService;
+import com.restaurante.app.models.OrderItemDTO;
+import com.restaurante.app.models.Product;
+import com.restaurante.app.models.Category;
+import com.restaurante.app.models.Order;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
-import java.awt.event.ActionListener;
-import java.sql.SQLException;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
@@ -27,68 +25,55 @@ public class GenerarComandaView extends JFrame {
     private JTable resumenTable;
     private DefaultTableModel tableModel;
     private int usuarioId;
-    private JComboBox<Producto> comboProducto;
-    private JComboBox<Categoria> comboCategoria;
-    private ProductoDAO productoDAO; // Instancia del DAO
-    private PedidoService pedidoService; // Instancia del controlador de pedidos
+    private JComboBox<Product> comboProducto;
+    private JComboBox<Category> comboCategoria;
+    private ProductService productService; // Consulta de productos/categorías del menú
+    private OrderService orderService; // Reglas de negocio de pedidos
 
     // Mapas para almacenar productos por categoría y categorías por ID
-    private Map<Integer, List<Producto>> productosPorCategoria;
-    private Map<Integer, Categoria> categoriasMap; // Para mapear categoria_id a objetos Categoria
-    private Map<Integer, Producto> productosMap; // Añadido para buscar productos por ID fácilmente
+    private Map<Integer, List<Product>> productosPorCategoria;
+    private Map<Integer, Category> categoriasMap; // Para mapear category id a objetos Category
+    private Map<Integer, Product> productosMap; // Añadido para buscar productos por ID fácilmente
 
     public GenerarComandaView(int usuarioId) {
         this.usuarioId = usuarioId;
         try {
-            this.productoDAO = SpringContext.getBean(ProductoDAO.class); // Obtener el DAO de productos del contexto
-            this.pedidoService = SpringContext.getBean(PedidoService.class); // Obtener el controlador de pedidos del contexto
+            this.productService = SpringContext.getBean(ProductService.class); // Consulta del menú
+            this.orderService = SpringContext.getBean(OrderService.class); // Servicio de pedidos
             loadProductosAndCategorias(); // Cargar los datos de la DB al iniciar la vista
-        } catch (SQLException e) {
+        } catch (RuntimeException e) {
             JOptionPane.showMessageDialog(this, "Error al conectar o cargar datos del menú desde la base de datos: " + e.getMessage(), "Error de DB", JOptionPane.ERROR_MESSAGE);
             e.printStackTrace();
             // Considera si quieres salir de la aplicación o deshabilitar funcionalidades si no hay conexión
         }
         setupUI();
-        // Es una buena práctica cerrar los DAOs/Controladores cuando la vista se cierra
-        this.addWindowListener(new java.awt.event.WindowAdapter() {
-            @Override
-            public void windowClosing(java.awt.event.WindowEvent windowEvent) {
-                if (productoDAO != null) {
-                    productoDAO.close();
-                }
-                if (pedidoService != null) {
-                    pedidoService.close();
-                }
-            }
-        });
     }
 
     /**
      * Carga todos los productos y categorías desde la base de datos
      * y los organiza en mapas para facilitar su uso en la interfaz.
-     * @throws SQLException Si ocurre un error al acceder a la base de datos.
      */
-    private void loadProductosAndCategorias() throws SQLException {
-        List<Producto> allProducts = productoDAO.obtenerTodosLosProductos();
-        List<Categoria> allCategories = productoDAO.obtenerTodasLasCategorias();
+    private void loadProductosAndCategorias() {
+        List<Product> allProducts = productService.findAll();
+        List<Category> allCategories = productService.findAllCategories();
 
         productosPorCategoria = new HashMap<>();
         categoriasMap = new HashMap<>();
         productosMap = new HashMap<>(); // Inicializar el nuevo mapa
 
         // Poblar el mapa de categorías y preparar listas vacías para productos
-        for (Categoria cat : allCategories) {
-            categoriasMap.put(cat.getCategoriaId(), cat);
-            productosPorCategoria.put(cat.getCategoriaId(), new ArrayList<>());
+        for (Category cat : allCategories) {
+            categoriasMap.put(cat.getId(), cat);
+            productosPorCategoria.put(cat.getId(), new ArrayList<>());
         }
 
         // Asignar cada producto a su lista de categoría correspondiente y al mapa de productos
-        for (Producto prod : allProducts) {
+        for (Product prod : allProducts) {
             productosMap.put(prod.getId(), prod); // Añadir al nuevo mapa
-            if (productosPorCategoria.containsKey(prod.getCategoriaId())) {
-                productosPorCategoria.get(prod.getCategoriaId()).add(prod);
+            if (productosPorCategoria.containsKey(prod.getCategoryId())) {
+                productosPorCategoria.get(prod.getCategoryId()).add(prod);
             } else {
-                System.err.println("Producto '" + prod.getNombre() + "' tiene una categoriaId (" + prod.getCategoriaId() + ") que no existe.");
+                System.err.println("Producto '" + prod.getName() + "' tiene una categoryId (" + prod.getCategoryId() + ") que no existe.");
             }
         }
     }
@@ -166,7 +151,7 @@ public class GenerarComandaView extends JFrame {
 
         JLabel lblCategoria = new JLabel("Categoría:");
         comboCategoria = new JComboBox<>();
-        for (Categoria cat : categoriasMap.values()) {
+        for (Category cat : categoriasMap.values()) {
             comboCategoria.addItem(cat);
         }
         comboCategoria.setFont(new Font("Segoe UI", Font.PLAIN, 16));
@@ -176,12 +161,12 @@ public class GenerarComandaView extends JFrame {
         comboProducto.setFont(new Font("Segoe UI", Font.PLAIN, 16));
 
         comboCategoria.addActionListener(e -> {
-            Categoria selectedCategory = (Categoria) comboCategoria.getSelectedItem();
+            Category selectedCategory = (Category) comboCategoria.getSelectedItem();
             comboProducto.removeAllItems();
             if (selectedCategory != null) {
-                List<Producto> productos = productosPorCategoria.get(selectedCategory.getCategoriaId());
+                List<Product> productos = productosPorCategoria.get(selectedCategory.getId());
                 if (productos != null) {
-                    for (Producto p : productos) {
+                    for (Product p : productos) {
                         comboProducto.addItem(p);
                     }
                 }
@@ -241,12 +226,12 @@ public class GenerarComandaView extends JFrame {
 
         // Acción Agregar
         btnAgregar.addActionListener(e -> {
-            Producto selectedProducto = (Producto) comboProducto.getSelectedItem();
+            Product selectedProducto = (Product) comboProducto.getSelectedItem();
             if (selectedProducto == null) {
                 JOptionPane.showMessageDialog(this, "Por favor, selecciona un producto.", "Advertencia", JOptionPane.WARNING_MESSAGE);
                 return;
             }
-            Categoria selectedCategoria = (Categoria) comboCategoria.getSelectedItem();
+            Category selectedCategoria = (Category) comboCategoria.getSelectedItem();
             if (selectedCategoria == null) {
                  JOptionPane.showMessageDialog(this, "No hay categoría seleccionada. Revisa la carga de datos.", "Error", JOptionPane.ERROR_MESSAGE);
                  return;
@@ -255,7 +240,7 @@ public class GenerarComandaView extends JFrame {
             int cantidad = (Integer) spinnerCantidad.getValue();
             String notas = txtNotas.getText().trim();
 
-            tableModel.addRow(new Object[]{selectedProducto.getNombre(), selectedCategoria.getNombre(), cantidad, notas, selectedProducto.getId()});
+            tableModel.addRow(new Object[]{selectedProducto.getName(), selectedCategoria.getName(), cantidad, notas, selectedProducto.getId()});
             txtNotas.setText("");
             spinnerCantidad.setValue(1);
         });
@@ -276,7 +261,7 @@ public class GenerarComandaView extends JFrame {
 
             if (confirm == JOptionPane.YES_OPTION) {
                 try {
-                    List<DetallePedidoDTO> detalles = new ArrayList<>();
+                    List<OrderItemDTO> detalles = new ArrayList<>();
                     StringBuilder productosResumen = new StringBuilder();
                     Set<String> categoriasUnicas = new HashSet<>(); // Usamos un Set para asegurar categorías únicas
 
@@ -290,7 +275,7 @@ public class GenerarComandaView extends JFrame {
                         String nombreProducto = (String) tableModel.getValueAt(i, 0); // Nombre del producto desde la tabla
                         String nombreCategoria = (String) tableModel.getValueAt(i, 1); // Nombre de la categoría desde la tabla
 
-                        DetallePedidoDTO detalle = new DetallePedidoDTO(productoId, cantidad, notas);
+                        OrderItemDTO detalle = new OrderItemDTO(productoId, cantidad, notas);
                         detalles.add(detalle);
 
                         // Construir el resumen de productos
@@ -306,19 +291,18 @@ public class GenerarComandaView extends JFrame {
                     // Convertir el Set de categorías a una cadena separada por comas
                     String categoriasResumenStr = String.join(", ", categoriasUnicas);
 
-                    // Crear el objeto Pedido
-                    Pedido nuevoPedido = new Pedido();
-                    nuevoPedido.setUsuarioId(usuarioId);
-                    nuevoPedido.setMesa(numeroMesa);
-                    nuevoPedido.setEstado("pendiente"); // Estado inicial
+                    // Crear el objeto Order
+                    Order nuevoPedido = new Order();
+                    nuevoPedido.setUserId(usuarioId);
+                    nuevoPedido.setTableNumber(numeroMesa);
+                    nuevoPedido.setStatus("pendiente"); // Estado inicial
 
-                    // Llama al controlador con todos los argumentos necesarios
-                    // Asumiendo que crearPedido es el método del controlador que envuelve el DAO
-                    pedidoService.crearPedido(nuevoPedido, detalles, productosResumen.toString(), categoriasResumenStr);
+                    // Delegar en el servicio con todos los argumentos necesarios
+                    orderService.createOrder(nuevoPedido, detalles, productosResumen.toString(), categoriasResumenStr);
 
                     JOptionPane.showMessageDialog(this, "¡La comanda fue generada con éxito!", "Comanda Creada", JOptionPane.INFORMATION_MESSAGE);
                     tableModel.setRowCount(0); // Limpiar la tabla de resumen
-                } catch (SQLException ex) {
+                } catch (RuntimeException ex) {
                     JOptionPane.showMessageDialog(this, "Error de conexión a base de datos al crear la comanda: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
                     ex.printStackTrace();
                 } catch (Exception ex) {

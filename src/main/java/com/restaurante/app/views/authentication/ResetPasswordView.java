@@ -2,12 +2,11 @@ package com.restaurante.app.views.authentication;
 
 import com.formdev.flatlaf.FlatLightLaf;
 import com.restaurante.app.config.SpringContext;
-import com.restaurante.app.service.UsuarioService;
+import com.restaurante.app.service.UserService;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
-import java.sql.SQLException;
 import java.util.regex.Pattern;
 
 public class ResetPasswordView extends BaseAuthView {
@@ -75,15 +74,15 @@ public class ResetPasswordView extends BaseAuthView {
                 return;
             }
 
-            UsuarioService usuarioService = SpringContext.getBean(UsuarioService.class);
+            UserService userService = SpringContext.getBean(UserService.class);
             try {
-                if (usuarioService.existsByEmail(correo)) {
+                if (userService.existsByEmail(correo)) {
                     dispose();
                     new SetNewPasswordView(correo).setVisible(true);
                 } else {
                     JOptionPane.showMessageDialog(frame, "No se encontró ningún usuario con ese correo.");
                 }
-            } catch (SQLException ex) {
+            } catch (RuntimeException ex) {
                 JOptionPane.showMessageDialog(frame, "Error al validar el usuario:\n" + ex.getMessage());
                 ex.printStackTrace();
             }

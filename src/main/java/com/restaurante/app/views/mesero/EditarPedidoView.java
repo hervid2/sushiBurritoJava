@@ -2,21 +2,18 @@ package com.restaurante.app.views.mesero;
 
 import com.formdev.flatlaf.FlatLightLaf;
 import com.restaurante.app.config.SpringContext;
-import com.restaurante.app.service.PedidoService;
-import com.restaurante.app.database.ProductoDAO; // Used directly to load products/categories for the combo boxes
-import com.restaurante.app.models.Categoria;
-import com.restaurante.app.models.DetallePedido;
-import com.restaurante.app.models.DetallePedidoDTO; // Importar DetallePedidoDTO
-import com.restaurante.app.models.Pedido;
-import com.restaurante.app.models.Producto;
+import com.restaurante.app.service.OrderService;
+import com.restaurante.app.service.ProductService;
+import com.restaurante.app.models.Category;
+import com.restaurante.app.models.OrderItem;
+import com.restaurante.app.models.OrderItemDTO;
+import com.restaurante.app.models.Order;
+import com.restaurante.app.models.Product;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
-import java.awt.event.WindowAdapter;
-import java.awt.event.WindowEvent;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet; // Para categorías únicas
@@ -29,21 +26,21 @@ public class EditarPedidoView extends JFrame {
     private JTable tablaPedido;
     private DefaultTableModel tableModel;
     private int usuarioId;
-    private JComboBox<Pedido> comboPedidos;
-    private JComboBox<Producto> comboProducto;
-    private JComboBox<Categoria> comboCategoria;
+    private JComboBox<Order> comboPedidos;
+    private JComboBox<Product> comboProducto;
+    private JComboBox<Category> comboCategoria;
     private JSpinner spinnerCantidad;
     private JTextField txtNotas;
     private JComboBox<String> comboMesaPedido;
     private JComboBox<String> comboEstadoPedido;
 
-    private PedidoService pedidoService; // Usaremos el controlador para toda la lógica de DB
-    private ProductoDAO productoDAO; // Mantener para cargar productos/categorías iniciales y para obtener objetos Producto/Categoria
+    private OrderService orderService; // Reglas de negocio de pedidos
+    private ProductService productService; // Consulta de productos/categorías del menú
 
     // Mapas para productos y categorías
-    private Map<Integer, List<Producto>> productosPorCategoria;
-    private Map<Integer, Categoria> categoriasMap;
-    private Map<Integer, Producto> productosMap;
+    private Map<Integer, List<Product>> productosPorCategoria;
+    private Map<Integer, Category> categoriasMap;
+    private Map<Integer, Product> productosMap;
 
     // Para mantener el detalle_id al editar filas (necesario para diferenciar detalles nuevos de existentes)
     private static final int COL_PRODUCTO_ID = 4; // Columna oculta para almacenar el ID del producto
@@ -52,68 +49,52 @@ public class EditarPedidoView extends JFrame {
     public EditarPedidoView(int usuarioId) {
         this.usuarioId = usuarioId;
         try {
-            this.pedidoService = SpringContext.getBean(PedidoService.class); // Obtener el controlador del contexto
-            this.productoDAO = SpringContext.getBean(ProductoDAO.class); // Se mantiene para la carga inicial de datos y obtener productos/categorias por ID
+            this.orderService = SpringContext.getBean(OrderService.class); // Servicio de pedidos
+            this.productService = SpringContext.getBean(ProductService.class); // Consulta del menú
             loadProductosAndCategorias();
-        } catch (SQLException e) {
+        } catch (RuntimeException e) {
             JOptionPane.showMessageDialog(this, "Error al conectar o cargar datos iniciales: " + e.getMessage(), "Error de DB", JOptionPane.ERROR_MESSAGE);
             e.printStackTrace();
         }
         setupUI();
         loadPedidos();
-
-        this.addWindowListener(new WindowAdapter() {
-            @Override
-            public void windowClosing(WindowEvent windowEvent) {
-                if (pedidoService != null) {
-                    pedidoService.close();
-                }
-                // Si productoDAO se inicializó directamente aquí y no a través del controlador, también cerrarlo
-                if (productoDAO != null) {
-                    productoDAO.close();
-                }
-            }
-        });
     }
 
-    private void loadProductosAndCategorias() throws SQLException {
-        // Usa productoDAO directamente aquí para poblar los JComboBox y mapas de datos
-        // ya que el controlador no tiene métodos para obtener listas completas de productos/categorias directamente.
-        List<Producto> allProducts = productoDAO.obtenerTodosLosProductos();
-        List<Categoria> allCategories = productoDAO.obtenerTodasLasCategorias();
+    private void loadProductosAndCategorias() {
+        List<Product> allProducts = productService.findAll();
+        List<Category> allCategories = productService.findAllCategories();
 
         productosPorCategoria = new HashMap<>();
         categoriasMap = new HashMap<>();
         productosMap = new HashMap<>();
 
-        for (Categoria cat : allCategories) {
-            categoriasMap.put(cat.getCategoriaId(), cat);
-            productosPorCategoria.put(cat.getCategoriaId(), new ArrayList<>());
+        for (Category cat : allCategories) {
+            categoriasMap.put(cat.getId(), cat);
+            productosPorCategoria.put(cat.getId(), new ArrayList<>());
         }
 
-        for (Producto prod : allProducts) {
+        for (Product prod : allProducts) {
             productosMap.put(prod.getId(), prod);
-            if (productosPorCategoria.containsKey(prod.getCategoriaId())) {
-                productosPorCategoria.get(prod.getCategoriaId()).add(prod);
+            if (productosPorCategoria.containsKey(prod.getCategoryId())) {
+                productosPorCategoria.get(prod.getCategoryId()).add(prod);
             }
         }
     }
 
     private void loadPedidos() {
         try {
-            // Usa el controlador para obtener la lista de pedidos
-            List<Pedido> pedidos = pedidoService.obtenerTodosLosPedidos(); // Asumiendo que existe este método en PedidoService
+            List<Order> pedidos = orderService.findAllOrders();
             comboPedidos.removeAllItems();
-            for (Pedido p : pedidos) {
+            for (Order p : pedidos) {
                 comboPedidos.addItem(p);
             }
-        } catch (SQLException e) {
+        } catch (RuntimeException e) {
             JOptionPane.showMessageDialog(this, "Error al cargar pedidos: " + e.getMessage(), "Error de DB", JOptionPane.ERROR_MESSAGE);
             e.printStackTrace();
         }
     }
 
-    private void loadDetallesPedido(Pedido pedido) {
+    private void loadDetallesPedido(Order pedido) {
         tableModel.setRowCount(0);
         if (pedido == null) {
             comboMesaPedido.setSelectedIndex(-1); // Limpiar selección de mesa
@@ -122,36 +103,35 @@ public class EditarPedidoView extends JFrame {
         }
 
         try {
-            // Usa el controlador para obtener los detalles del pedido
-            List<DetallePedido> detalles = pedidoService.obtenerDetallesPorPedidoId(pedido.getPedidoId());
+            List<OrderItem> detalles = orderService.findItemsByOrderId(pedido.getId());
 
             // Setear la mesa y el estado del pedido principal
-            comboMesaPedido.setSelectedItem(String.valueOf(pedido.getMesa()));
-            comboEstadoPedido.setSelectedItem(pedido.getEstado());
+            comboMesaPedido.setSelectedItem(String.valueOf(pedido.getTableNumber()));
+            comboEstadoPedido.setSelectedItem(pedido.getStatus());
 
-            for (DetallePedido dp : detalles) {
-                Producto producto = productosMap.get(dp.getProductoId());
-                Categoria categoria = null;
+            for (OrderItem dp : detalles) {
+                Product producto = productosMap.get(dp.getProductId());
+                Category categoria = null;
                 String categoriaNombre = "N/A";
 
                 if (producto != null) {
-                    categoria = categoriasMap.get(producto.getCategoriaId());
+                    categoria = categoriasMap.get(producto.getCategoryId());
                     if (categoria != null) {
-                        categoriaNombre = categoria.getNombre();
+                        categoriaNombre = categoria.getName();
                     }
                 }
 
-                // Asegúrate de añadir el Detalle ID (dp.getDetalleId())
+                // Asegúrate de añadir el OrderItem ID (dp.getId())
                 tableModel.addRow(new Object[]{
-                    producto != null ? producto.getNombre() : "Producto Desconocido",
+                    producto != null ? producto.getName() : "Producto Desconocido",
                     categoriaNombre,
-                    dp.getCantidad(),
-                    dp.getNotas(),
-                    dp.getProductoId(), // COL_PRODUCTO_ID
-                    dp.getDetalleId()   // COL_DETALLE_ID (Muy importante para la edición)
+                    dp.getQuantity(),
+                    dp.getNotes(),
+                    dp.getProductId(), // COL_PRODUCTO_ID
+                    dp.getId()         // COL_DETALLE_ID (Muy importante para la edición)
                 });
             }
-        } catch (SQLException e) {
+        } catch (RuntimeException e) {
             JOptionPane.showMessageDialog(this, "Error al cargar detalles del pedido: " + e.getMessage(), "Error de DB", JOptionPane.ERROR_MESSAGE);
             e.printStackTrace();
         }
@@ -199,7 +179,7 @@ public class EditarPedidoView extends JFrame {
         comboPedidos.setPreferredSize(new Dimension(200, 30));
         // Listener para cargar detalles cuando se selecciona un pedido
         comboPedidos.addActionListener(e -> {
-            Pedido selectedPedido = (Pedido) comboPedidos.getSelectedItem();
+            Order selectedPedido = (Order) comboPedidos.getSelectedItem();
             loadDetallesPedido(selectedPedido);
             // La lógica para setear mesa y estado ahora está dentro de loadDetallesPedido
             // para asegurar que se actualizan cuando se carga un nuevo pedido.
@@ -280,9 +260,9 @@ public class EditarPedidoView extends JFrame {
                 txtNotas.setText(notas);
 
                 // Setear producto y categoría en los JComboBox
-                Producto prodParaSeleccionar = productosMap.get(productoId);
+                Product prodParaSeleccionar = productosMap.get(productoId);
                 if (prodParaSeleccionar != null) {
-                    Categoria catParaSeleccionar = categoriasMap.get(prodParaSeleccionar.getCategoriaId());
+                    Category catParaSeleccionar = categoriasMap.get(prodParaSeleccionar.getCategoryId());
                     if (catParaSeleccionar != null) {
                         comboCategoria.setSelectedItem(catParaSeleccionar);
                         // Asegurarse de que el listener de comboCategoria se dispare y luego seleccionar el producto
@@ -310,20 +290,20 @@ public class EditarPedidoView extends JFrame {
         comboProducto.setFont(new Font("Segoe UI", Font.PLAIN, 16));
 
         JLabel lblCategoria = new JLabel("Categoría:");
-        comboCategoria = new JComboBox<>(); // Ahora de tipo Categoria
+        comboCategoria = new JComboBox<>(); // Ahora de tipo Category
         // Llenar comboCategoria con las categorías cargadas
-        for (Categoria cat : categoriasMap.values()) {
+        for (Category cat : categoriasMap.values()) {
             comboCategoria.addItem(cat);
         }
         comboCategoria.setFont(new Font("Segoe UI", Font.PLAIN, 16));
         // Listener para actualizar comboProducto cuando cambia la categoría
         comboCategoria.addActionListener(e -> {
-            Categoria selectedCategory = (Categoria) comboCategoria.getSelectedItem();
+            Category selectedCategory = (Category) comboCategoria.getSelectedItem();
             comboProducto.removeAllItems();
             if (selectedCategory != null) {
-                List<Producto> products = productosPorCategoria.get(selectedCategory.getCategoriaId());
+                List<Product> products = productosPorCategoria.get(selectedCategory.getId());
                 if (products != null) {
-                    for (Producto p : products) {
+                    for (Product p : products) {
                         comboProducto.addItem(p);
                     }
                 }
@@ -382,8 +362,8 @@ public class EditarPedidoView extends JFrame {
 
         // Acciones de botones
         btnAgregar.addActionListener(e -> {
-            Producto selectedProducto = (Producto) comboProducto.getSelectedItem();
-            Categoria selectedCategoria = (Categoria) comboCategoria.getSelectedItem();
+            Product selectedProducto = (Product) comboProducto.getSelectedItem();
+            Category selectedCategoria = (Category) comboCategoria.getSelectedItem();
             int cantidad = (Integer) spinnerCantidad.getValue();
             String notas = txtNotas.getText().trim(); // Usar trim para limpiar espacios
 
@@ -398,8 +378,8 @@ public class EditarPedidoView extends JFrame {
 
             // Añadir Producto ID y Detalle ID (0 para nuevos detalles, ya que no tienen un ID de BD aún)
             tableModel.addRow(new Object[]{
-                selectedProducto.getNombre(),
-                selectedCategoria.getNombre(),
+                selectedProducto.getName(),
+                selectedCategoria.getName(),
                 cantidad,
                 notas,
                 selectedProducto.getId(), // COL_PRODUCTO_ID
@@ -412,8 +392,8 @@ public class EditarPedidoView extends JFrame {
         btnModificar.addActionListener(e -> {
             int selectedRow = tablaPedido.getSelectedRow();
             if (selectedRow != -1) {
-                Producto selectedProducto = (Producto) comboProducto.getSelectedItem();
-                Categoria selectedCategoria = (Categoria) comboCategoria.getSelectedItem();
+                Product selectedProducto = (Product) comboProducto.getSelectedItem();
+                Category selectedCategoria = (Category) comboCategoria.getSelectedItem();
                 int cantidad = (Integer) spinnerCantidad.getValue();
                 String notas = txtNotas.getText().trim();
 
@@ -430,8 +410,8 @@ public class EditarPedidoView extends JFrame {
                 int detalleId = (int) tableModel.getValueAt(selectedRow, COL_DETALLE_ID);
 
                 // Actualizar la fila seleccionada en la tabla
-                tableModel.setValueAt(selectedProducto.getNombre(), selectedRow, 0);
-                tableModel.setValueAt(selectedCategoria.getNombre(), selectedRow, 1);
+                tableModel.setValueAt(selectedProducto.getName(), selectedRow, 0);
+                tableModel.setValueAt(selectedCategoria.getName(), selectedRow, 1);
                 tableModel.setValueAt(cantidad, selectedRow, 2);
                 tableModel.setValueAt(notas, selectedRow, 3);
                 tableModel.setValueAt(selectedProducto.getId(), selectedRow, COL_PRODUCTO_ID);
@@ -461,7 +441,7 @@ public class EditarPedidoView extends JFrame {
         btnConfirmar.setFont(new Font("Segoe UI", Font.BOLD, 16));
         btnConfirmar.setPreferredSize(new Dimension(220, 40));
         btnConfirmar.addActionListener(e -> {
-            Pedido selectedPedido = (Pedido) comboPedidos.getSelectedItem();
+            Order selectedPedido = (Order) comboPedidos.getSelectedItem();
             if (selectedPedido == null) {
                 JOptionPane.showMessageDialog(this, "Por favor, selecciona un pedido para guardar los cambios.", "Advertencia", JOptionPane.WARNING_MESSAGE);
                 return;
@@ -477,40 +457,36 @@ public class EditarPedidoView extends JFrame {
             if (confirm == JOptionPane.YES_OPTION) {
                 try {
                     // Actualizar datos del pedido principal desde los JComboBox
-                    selectedPedido.setMesa(Integer.parseInt((String)comboMesaPedido.getSelectedItem()));
-                    selectedPedido.setEstado((String)comboEstadoPedido.getSelectedItem());
-                    // selectedPedido.setUsuarioId(usuarioId); // Mantener el usuario original o actualizar si aplica
+                    selectedPedido.setTableNumber(Integer.parseInt((String)comboMesaPedido.getSelectedItem()));
+                    selectedPedido.setStatus((String)comboEstadoPedido.getSelectedItem());
 
-                    List<DetallePedidoDTO> detallesParaActualizar = new ArrayList<>();
-                    // Generar DetallePedidoDTOs para el controlador
+                    List<OrderItemDTO> detallesParaActualizar = new ArrayList<>();
+                    // Generar OrderItemDTOs para el servicio
                     for (int i = 0; i < tableModel.getRowCount(); i++) {
                         int productoId = (int) tableModel.getValueAt(i, COL_PRODUCTO_ID);
                         int cantidad = (int) tableModel.getValueAt(i, 2);
                         String notas = (String) tableModel.getValueAt(i, 3);
 
-                        DetallePedidoDTO dto = new DetallePedidoDTO(productoId, cantidad, notas);
+                        OrderItemDTO dto = new OrderItemDTO(productoId, cantidad, notas);
                         detallesParaActualizar.add(dto);
                     }
 
-                    // Llama al controlador para actualizar el pedido y sus detalles.
-                    // El controlador se encargará de generar los resúmenes y llamar al DAO.
-                    pedidoService.actualizarPedido(selectedPedido, detallesParaActualizar);
+                    // Delegar en el servicio para actualizar el pedido y sus detalles;
+                    // el servicio regenera los resúmenes y persiste vía repositorios.
+                    orderService.updateOrder(selectedPedido, detallesParaActualizar);
 
                     JOptionPane.showMessageDialog(this, "¡Cambios guardados correctamente!", "Éxito", JOptionPane.INFORMATION_MESSAGE);
                     loadPedidos(); // Recargar la lista de pedidos (por si cambió el estado o mesa)
                     // Después de actualizar, selecciona nuevamente el pedido en el combobox para recargar sus detalles
                     // Esto asegura que la tabla refleje el estado de la DB tras el UPDATE
                     for(int i = 0; i < comboPedidos.getItemCount(); i++) {
-                        Pedido p = (Pedido)comboPedidos.getItemAt(i);
-                        if (p.getPedidoId() == selectedPedido.getPedidoId()) {
+                        Order p = (Order)comboPedidos.getItemAt(i);
+                        if (p.getId().equals(selectedPedido.getId())) {
                             comboPedidos.setSelectedItem(p);
                             break;
                         }
                     }
 
-                } catch (SQLException ex) {
-                    JOptionPane.showMessageDialog(this, "Error de base de datos al guardar cambios: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
-                    ex.printStackTrace();
                 } catch (NumberFormatException ex) {
                     JOptionPane.showMessageDialog(this, "Error al convertir mesa a número: " + ex.getMessage(), "Error de Datos", JOptionPane.ERROR_MESSAGE);
                     ex.printStackTrace();
@@ -544,11 +520,4 @@ public class EditarPedidoView extends JFrame {
         bottomPanel.add(btnVolver);
         mainPanel.add(bottomPanel, BorderLayout.SOUTH);
     }
-
-    // Método para obtener todos los pedidos (necesario para el JComboBox de pedidos)
-    // Este método lo he añadido temporalmente aquí para que el comboPedidos funcione.
-    // Idealmente, se debería tener un método en PedidoService para obtener todos los pedidos.
-    // Si ya lo tienes, puedes borrar este y usar el del controlador.
-    // (Por ejemplo, si PedidoService tiene un 'obtenerTodosLosPedidos()', úsalo en loadPedidos()).
-    // Ya lo tienes, así que lo haré que use el controlador.
 }

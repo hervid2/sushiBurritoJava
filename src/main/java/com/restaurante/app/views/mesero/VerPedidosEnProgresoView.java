@@ -2,20 +2,18 @@ package com.restaurante.app.views.mesero;
 
 import com.formdev.flatlaf.FlatLightLaf;
 import com.restaurante.app.config.SpringContext;
-import com.restaurante.app.database.PedidoDAO;
-import com.restaurante.app.database.ProductoDAO;
-import com.restaurante.app.models.Pedido;
-import com.restaurante.app.models.DetallePedido;
-import com.restaurante.app.models.Producto;
+import com.restaurante.app.models.Order;
+import com.restaurante.app.models.OrderItem;
+import com.restaurante.app.models.Product;
+import com.restaurante.app.service.OrderService;
+import com.restaurante.app.service.ProductService;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
-import java.awt.event.WindowAdapter;
-import java.awt.event.WindowEvent;
-import java.sql.SQLException;
 import java.text.DecimalFormat;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.ArrayList;
 
@@ -23,33 +21,21 @@ public class VerPedidosEnProgresoView extends JFrame {
 
     private JTable pedidosTable;
     private DefaultTableModel tableModel;
-    private PedidoDAO pedidoDAO;
-    private ProductoDAO productoDAO;
+    private OrderService orderService;
+    private ProductService productService;
     private int usuarioId;
 
     public VerPedidosEnProgresoView(int usuarioId) {
         this.usuarioId = usuarioId;
         try {
-            pedidoDAO = SpringContext.getBean(PedidoDAO.class);
-            productoDAO = SpringContext.getBean(ProductoDAO.class);
+            orderService = SpringContext.getBean(OrderService.class);
+            productService = SpringContext.getBean(ProductService.class);
         } catch (Exception e) {
             JOptionPane.showMessageDialog(this, "Error al conectar con la base de datos: " + e.getMessage(), "Error de DB", JOptionPane.ERROR_MESSAGE);
             e.printStackTrace();
         }
         setupUI();
         loadPedidosEnProgreso();
-
-        this.addWindowListener(new WindowAdapter() {
-            @Override
-            public void windowClosing(WindowEvent windowEvent) {
-                if (pedidoDAO != null) {
-                    pedidoDAO.close();
-                }
-                if (productoDAO != null) {
-                    productoDAO.close();
-                }
-            }
-        });
     }
 
     private void loadPedidosEnProgreso() {
@@ -57,41 +43,41 @@ public class VerPedidosEnProgresoView extends JFrame {
         DecimalFormat df = new DecimalFormat("#,##0.00");
 
         try {
-            List<Pedido> pedidosActivos = new ArrayList<>();
-            pedidosActivos.addAll(pedidoDAO.obtenerPedidosPorEstado("pendiente"));
-            pedidosActivos.addAll(pedidoDAO.obtenerPedidosPorEstado("preparando"));
-            pedidosActivos.addAll(pedidoDAO.obtenerPedidosPorEstado("entregado"));
+            List<Order> pedidosActivos = new ArrayList<>();
+            pedidosActivos.addAll(orderService.findOrdersByStatus("pendiente"));
+            pedidosActivos.addAll(orderService.findOrdersByStatus("preparando"));
+            pedidosActivos.addAll(orderService.findOrdersByStatus("entregado"));
 
-            for (Pedido pedido : pedidosActivos) {
-                // *** CAMBIO CLAVE AQUÍ: Usar pedido.getProductosResumen() directamente ***
-                String productosResumen = pedido.getProductosResumen(); // El resumen ya está cargado en el objeto Pedido
-                double totalEstimado = calcularTotalEstimado(pedido.getPedidoId());
+            for (Order pedido : pedidosActivos) {
+                // El resumen de productos ya está cargado en el objeto Order
+                String productosResumen = pedido.getProductSummary();
+                double totalEstimado = calcularTotalEstimado(pedido.getId());
 
-                String horaCreacion = (pedido.getFechaCreacion() != null) ?
-                                       new java.text.SimpleDateFormat("HH:mm").format(pedido.getFechaCreacion()) : "N/A";
+                String horaCreacion = (pedido.getCreatedAt() != null) ?
+                                       pedido.getCreatedAt().format(DateTimeFormatter.ofPattern("HH:mm")) : "N/A";
 
                 tableModel.addRow(new Object[]{
-                    pedido.getPedidoId(),
-                    pedido.getMesa(),
-                    "Mesero ID: " + pedido.getUsuarioId(),
-                    pedido.getEstado(),
+                    pedido.getId(),
+                    pedido.getTableNumber(),
+                    "Mesero ID: " + pedido.getUserId(),
+                    pedido.getStatus(),
                     horaCreacion,
                     "$" + df.format(totalEstimado)
                 });
             }
-        } catch (SQLException e) {
+        } catch (RuntimeException e) {
             JOptionPane.showMessageDialog(this, "Error al cargar pedidos en progreso: " + e.getMessage(), "Error de DB", JOptionPane.ERROR_MESSAGE);
             e.printStackTrace();
         }
     }
 
-    private double calcularTotalEstimado(int pedidoId) throws SQLException {
+    private double calcularTotalEstimado(int pedidoId) {
         double total = 0.0;
-        List<DetallePedido> detalles = pedidoDAO.obtenerDetallesPorPedidoId(pedidoId);
-        for (DetallePedido detalle : detalles) {
-            Producto producto = productoDAO.obtenerProductoPorId(detalle.getProductoId());
+        List<OrderItem> detalles = orderService.findItemsByOrderId(pedidoId);
+        for (OrderItem detalle : detalles) {
+            Product producto = productService.findProductById(detalle.getProductId());
             if (producto != null) {
-                total += producto.getValorVenta() * detalle.getCantidad();
+                total += producto.getSalePrice() * detalle.getQuantity();
             }
         }
         return total;

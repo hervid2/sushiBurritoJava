@@ -2,29 +2,26 @@ package com.restaurante.app.views.mesero;
 
 import com.formdev.flatlaf.FlatLightLaf;
 import com.restaurante.app.config.SpringContext;
-import com.restaurante.app.database.PedidoDAO;
-import com.restaurante.app.models.Pedido;
+import com.restaurante.app.models.Order;
+import com.restaurante.app.service.OrderService;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
-import java.awt.event.WindowAdapter;
-import java.awt.event.WindowEvent;
-import java.sql.SQLException;
 import java.util.List;
 
 public class CancelarPedidoView extends JFrame {
 
     private JTable pedidosTable;
     private DefaultTableModel pedidosModel;
-    private PedidoDAO pedidoDAO; // Instancia del DAO
+    private OrderService orderService;
     private int usuarioId; // Para volver al panel del mesero con el ID correcto
 
     public CancelarPedidoView(int usuarioId) { // Añadir usuarioId al constructor
         this.usuarioId = usuarioId;
         try {
-            pedidoDAO = SpringContext.getBean(PedidoDAO.class); // Obtener el DAO del contexto
+            orderService = SpringContext.getBean(OrderService.class);
         } catch (Exception e) {
             JOptionPane.showMessageDialog(this, "Error al conectar con la base de datos: " + e.getMessage(), "Error de DB", JOptionPane.ERROR_MESSAGE);
             e.printStackTrace();
@@ -32,36 +29,26 @@ public class CancelarPedidoView extends JFrame {
         }
         setupUI();
         loadPedidosParaCancelar(); // Cargar pedidos al inicio
-
-        // Asegurarse de cerrar la conexión al cerrar la ventana
-        this.addWindowListener(new WindowAdapter() {
-            @Override
-            public void windowClosing(WindowEvent windowEvent) {
-                if (pedidoDAO != null) {
-                    pedidoDAO.close();
-                }
-            }
-        });
     }
 
     private void loadPedidosParaCancelar() {
         pedidosModel.setRowCount(0); // Limpiar tabla
         try {
             // Obtener pedidos que pueden ser cancelados (ej. Pendiente o Preparando)
-            List<Pedido> pedidosPendientes = pedidoDAO.obtenerPedidosPorEstado("pendiente");
-            List<Pedido> pedidosPreparando = pedidoDAO.obtenerPedidosPorEstado("preparando");
+            List<Order> pedidosPendientes = orderService.findOrdersByStatus("pendiente");
+            List<Order> pedidosPreparando = orderService.findOrdersByStatus("preparando");
 
             // Combinar y mostrar en la tabla
-            for (Pedido p : pedidosPendientes) {
-                String productosResumen = p.getProductosResumen();
-                pedidosModel.addRow(new Object[]{p.getPedidoId(), p.getMesa(), productosResumen, p.getEstado()});
+            for (Order p : pedidosPendientes) {
+                String productosResumen = p.getProductSummary();
+                pedidosModel.addRow(new Object[]{p.getId(), p.getTableNumber(), productosResumen, p.getStatus()});
             }
-            for (Pedido p : pedidosPreparando) {
-                String productosResumen = p.getProductosResumen();
-                pedidosModel.addRow(new Object[]{p.getPedidoId(), p.getMesa(), productosResumen, p.getEstado()});
+            for (Order p : pedidosPreparando) {
+                String productosResumen = p.getProductSummary();
+                pedidosModel.addRow(new Object[]{p.getId(), p.getTableNumber(), productosResumen, p.getStatus()});
             }
 
-        } catch (SQLException e) {
+        } catch (RuntimeException e) {
             JOptionPane.showMessageDialog(this, "Error al cargar pedidos para cancelar: " + e.getMessage(), "Error de DB", JOptionPane.ERROR_MESSAGE);
             e.printStackTrace();
         }
@@ -128,10 +115,10 @@ public class CancelarPedidoView extends JFrame {
                     int confirm = JOptionPane.showConfirmDialog(this, "¿Estás seguro de que quieres cancelar el Pedido #" + pedidoId + "?", "Confirmar Cancelación", JOptionPane.YES_NO_OPTION);
                     if (confirm == JOptionPane.YES_OPTION) {
                         try {
-                            pedidoDAO.actualizarEstadoPedido(pedidoId, "cancelado");
+                            orderService.updateStatus(pedidoId, "cancelado");
                             JOptionPane.showMessageDialog(this, "Pedido #" + pedidoId + " cancelado exitosamente.");
                             loadPedidosParaCancelar(); // Recargar la tabla para reflejar el cambio
-                        } catch (SQLException ex) {
+                        } catch (RuntimeException ex) {
                             JOptionPane.showMessageDialog(this, "Error al cancelar pedido en la DB: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
                             ex.printStackTrace();
                         }

@@ -1,7 +1,7 @@
 package com.restaurante.app.navigation;
 
 import com.restaurante.app.exception.DomainException;
-import com.restaurante.app.models.Usuario;
+import com.restaurante.app.models.User;
 import com.restaurante.app.views.admin.AdminPanelView;
 import com.restaurante.app.views.cocina.CocinaPanelView;
 import com.restaurante.app.views.mesero.WaiterPanelView;
@@ -21,13 +21,13 @@ public class NavigationManager {
     /**
      * Opens the home window that matches the user's role.
      *
-     * @param usuario the authenticated user
+     * @param user the authenticated user
      * @throws DomainException if the user's role is not recognised
      */
-    public void openHomeFor(Usuario usuario) throws DomainException {
-        switch (usuario.getRol().toLowerCase()) {
+    public void openHomeFor(User user) throws DomainException {
+        switch (user.getRole().toLowerCase()) {
             case "administrador" -> new AdminPanelView().setVisible(true);
-            case "mesero" -> new WaiterPanelView(usuario.getId()).setVisible(true);
+            case "mesero" -> new WaiterPanelView(user.getId()).setVisible(true);
             case "cocinero" -> new CocinaPanelView().setVisible(true);
             default -> throw new DomainException("Rol de usuario no reconocido.");
         }

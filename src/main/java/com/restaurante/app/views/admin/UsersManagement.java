@@ -4,14 +4,13 @@ import com.formdev.flatlaf.FlatLightLaf;
 import com.restaurante.app.config.SpringContext;
 import com.restaurante.app.exception.DomainException;
 import com.restaurante.app.exception.ValidationException;
-import com.restaurante.app.service.UsuarioService;
+import com.restaurante.app.service.UserService;
 
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.sql.SQLException;
 
 public class UsersManagement extends JFrame {
     public UsersManagement() {
@@ -110,9 +109,9 @@ public class UsersManagement extends JFrame {
                 return;
             }
 
-            UsuarioService usuarioService = SpringContext.getBean(UsuarioService.class);
+            UserService userService = SpringContext.getBean(UserService.class);
             try {
-                usuarioService.registerUser(nombre, correo, rolSeleccionado.toLowerCase(), contrasena);
+                userService.registerUser(nombre, correo, rolSeleccionado.toLowerCase(), contrasena);
                 JOptionPane.showMessageDialog(this, "Usuario creado exitosamente.");
                 emailField.setText("");
                 usernameField.setText("");
@@ -120,11 +119,9 @@ public class UsersManagement extends JFrame {
                 roleComboBox.setSelectedIndex(0);
             } catch (ValidationException vex) {
                 JOptionPane.showMessageDialog(this, vex.getMessage(), "Errores de Validación", JOptionPane.ERROR_MESSAGE);
-            } catch (SQLException ex) {
+            } catch (RuntimeException ex) {
                 JOptionPane.showMessageDialog(this, "Error al registrar usuario:\n" + ex.getMessage());
                 ex.printStackTrace();
-            } finally {
-                usuarioService.close();
             }
         });
         createPanel.add(createUserButton);
@@ -181,18 +178,16 @@ public class UsersManagement extends JFrame {
                     JOptionPane.WARNING_MESSAGE);
 
             if (confirmacion == JOptionPane.YES_OPTION) {
-                UsuarioService usuarioService = SpringContext.getBean(UsuarioService.class);
+                UserService userService = SpringContext.getBean(UserService.class);
                 try {
-                    usuarioService.deleteUser(correoAEliminar);
+                    userService.deleteUser(correoAEliminar);
                     JOptionPane.showMessageDialog(this, "Usuario eliminado exitosamente.");
                     deleteUserEmailField.setText("");
                 } catch (DomainException dex) {
                     JOptionPane.showMessageDialog(this, dex.getMessage());
-                } catch (SQLException ex) {
+                } catch (RuntimeException ex) {
                     JOptionPane.showMessageDialog(this, "Error al eliminar usuario:\n" + ex.getMessage());
                     ex.printStackTrace();
-                } finally {
-                    usuarioService.close();
                 }
             }
         });
@@ -252,19 +247,17 @@ public class UsersManagement extends JFrame {
                 return;
             }
 
-            UsuarioService usuarioService = SpringContext.getBean(UsuarioService.class);
+            UserService userService = SpringContext.getBean(UserService.class);
             try {
-                usuarioService.updateUserEmail(oldEmail, newEmail);
+                userService.updateUserEmail(oldEmail, newEmail);
                 JOptionPane.showMessageDialog(this, "Correo de usuario actualizado exitosamente.");
                 oldEmailField.setText("");
                 newEmailField.setText("");
             } catch (DomainException dex) {
                 JOptionPane.showMessageDialog(this, dex.getMessage());
-            } catch (SQLException ex) {
+            } catch (RuntimeException ex) {
                 JOptionPane.showMessageDialog(this, "Error al actualizar el correo del usuario:\n" + ex.getMessage());
                 ex.printStackTrace();
-            } finally {
-                usuarioService.close();
             }
         });
         updateEmailPanel.add(updateEmailButton);

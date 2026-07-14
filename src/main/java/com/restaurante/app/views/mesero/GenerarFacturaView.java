@@ -2,22 +2,19 @@ package com.restaurante.app.views.mesero;
 
 import com.formdev.flatlaf.FlatLightLaf;
 import com.restaurante.app.config.SpringContext;
-import com.restaurante.app.service.FacturaService;
-import com.restaurante.app.database.PedidoDAO;
-import com.restaurante.app.database.ProductoDAO;
-import com.restaurante.app.models.DetallePedido;
-import com.restaurante.app.models.Factura; 
-import com.restaurante.app.models.Pedido;
-import com.restaurante.app.models.Producto;
+import com.restaurante.app.service.InvoiceService;
+import com.restaurante.app.service.OrderService;
+import com.restaurante.app.service.ProductService;
+import com.restaurante.app.models.OrderItem;
+import com.restaurante.app.models.Invoice;
+import com.restaurante.app.models.Order;
+import com.restaurante.app.models.Product;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.awt.event.ItemEvent;
-import java.awt.event.WindowAdapter;
-import java.awt.event.WindowEvent;
-import java.sql.SQLException;
 import java.text.DecimalFormat;
 import java.time.LocalDateTime; 
 import java.util.List;
@@ -28,16 +25,16 @@ public class GenerarFacturaView extends JFrame {
 
     private JTable tablaFactura;
     private DefaultTableModel tablaFacturaModel;
-    private JComboBox<Pedido> comboPedidos;
+    private JComboBox<Order> comboPedidos;
     private JLabel labelImpuesto;
     private JTextField campoPropina;
     private JLabel labelTotal;
     private JTextField campoMesa;
 
-    private PedidoDAO pedidoDAO;
-    private ProductoDAO productoDAO;
-    private FacturaService facturaService;
-    private Map<Integer, Pedido> pedidosDisponibles;
+    private OrderService orderService;
+    private ProductService productService;
+    private InvoiceService invoiceService;
+    private Map<Integer, Order> pedidosDisponibles;
     private DecimalFormat df;
     private int usuarioId;
 
@@ -50,9 +47,9 @@ public class GenerarFacturaView extends JFrame {
         df = new DecimalFormat("#,##0.00");
 
         try {
-            pedidoDAO = SpringContext.getBean(PedidoDAO.class);
-            productoDAO = SpringContext.getBean(ProductoDAO.class);
-            facturaService = SpringContext.getBean(FacturaService.class);
+            orderService = SpringContext.getBean(OrderService.class);
+            productService = SpringContext.getBean(ProductService.class);
+            invoiceService = SpringContext.getBean(InvoiceService.class);
             pedidosDisponibles = new HashMap<>();
         } catch (Exception e) {
             JOptionPane.showMessageDialog(this, "Error al conectar con la base de datos: " + e.getMessage(), "Error de DB", JOptionPane.ERROR_MESSAGE);
@@ -61,15 +58,6 @@ public class GenerarFacturaView extends JFrame {
         }
         setupUI();
         loadPedidosParaFacturar();
-
-        this.addWindowListener(new WindowAdapter() {
-            @Override
-            public void windowClosing(WindowEvent windowEvent) {
-                if (pedidoDAO != null) pedidoDAO.close();
-                if (productoDAO != null) productoDAO.close();
-                if (facturaService != null) facturaService.close();
-            }
-        });
     }
 
     private void loadPedidosParaFacturar() {
@@ -78,17 +66,17 @@ public class GenerarFacturaView extends JFrame {
         try {
             // Obtener pedidos que están listos para ser facturados
             // Estados elegibles: "entregado", "preparando" (si se puede facturar antes de entrega)
-            List<Pedido> pedidosEntregados = pedidoDAO.obtenerPedidosPorEstado("entregado");
-            List<Pedido> pedidosPreparando = pedidoDAO.obtenerPedidosPorEstado("preparando");
+            List<Order> pedidosEntregados = orderService.findOrdersByStatus("entregado");
+            List<Order> pedidosPreparando = orderService.findOrdersByStatus("preparando");
 
             // Combine and sort if necessary, for now just add.
-            for (Pedido p : pedidosEntregados) {
+            for (Order p : pedidosEntregados) {
                 comboPedidos.addItem(p);
-                pedidosDisponibles.put(p.getPedidoId(), p);
+                pedidosDisponibles.put(p.getId(), p);
             }
-            for (Pedido p : pedidosPreparando) {
+            for (Order p : pedidosPreparando) {
                 comboPedidos.addItem(p);
-                pedidosDisponibles.put(p.getPedidoId(), p);
+                pedidosDisponibles.put(p.getId(), p);
             }
 
             if (comboPedidos.getItemCount() > 0) {
@@ -102,37 +90,37 @@ public class GenerarFacturaView extends JFrame {
                 labelTotal.setText("Total: $0");
             }
 
-        } catch (SQLException e) {
+        } catch (RuntimeException e) {
             JOptionPane.showMessageDialog(this, "Error al cargar pedidos: " + e.getMessage(), "Error de DB", JOptionPane.ERROR_MESSAGE);
             e.printStackTrace();
         }
     }
 
-    private void displayPedidoDetails(Pedido selectedPedido) {
+    private void displayPedidoDetails(Order selectedPedido) {
         tablaFacturaModel.setRowCount(0);
-        campoMesa.setText(String.valueOf(selectedPedido.getMesa()));
+        campoMesa.setText(String.valueOf(selectedPedido.getTableNumber()));
 
         double subtotal = 0.0;
 
         try {
-            List<DetallePedido> detalles = pedidoDAO.obtenerDetallesPorPedidoId(selectedPedido.getPedidoId());
-            for (DetallePedido dp : detalles) {
-                Producto producto = productoDAO.obtenerProductoPorId(dp.getProductoId());
+            List<OrderItem> detalles = orderService.findItemsByOrderId(selectedPedido.getId());
+            for (OrderItem dp : detalles) {
+                Product producto = productService.findProductById(dp.getProductId());
                 if (producto != null) {
-                    // Usar valor_venta del Producto
-                    double precioUnitario = producto.getValorVenta();
-                    double subtotalProducto = precioUnitario * dp.getCantidad();
+                    // Usar el precio de venta del Product
+                    double precioUnitario = producto.getSalePrice();
+                    double subtotalProducto = precioUnitario * dp.getQuantity();
                     subtotal += subtotalProducto;
 
                     tablaFacturaModel.addRow(new Object[]{
-                        producto.getNombre(),
-                        dp.getCantidad(),
+                        producto.getName(),
+                        dp.getQuantity(),
                         "$" + df.format(precioUnitario),
                         "$" + df.format(subtotalProducto)
                     });
                 }
             }
-        } catch (SQLException e) {
+        } catch (RuntimeException e) {
             JOptionPane.showMessageDialog(this, "Error al cargar detalles del pedido: " + e.getMessage(), "Error de DB", JOptionPane.ERROR_MESSAGE);
             e.printStackTrace();
         }
@@ -230,7 +218,7 @@ public class GenerarFacturaView extends JFrame {
 
         comboPedidos.addItemListener(e -> {
             if (e.getStateChange() == ItemEvent.SELECTED) {
-                Pedido selectedPedido = (Pedido) comboPedidos.getSelectedItem();
+                Order selectedPedido = (Order) comboPedidos.getSelectedItem();
                 if (selectedPedido != null) {
                     displayPedidoDetails(selectedPedido);
                 } else {
@@ -286,20 +274,20 @@ public class GenerarFacturaView extends JFrame {
         campoPropina.setPreferredSize(new Dimension(80, 25));
         campoPropina.setHorizontalAlignment(JTextField.RIGHT);
         campoPropina.addActionListener(e -> {
-            Pedido selectedPedido = (Pedido) comboPedidos.getSelectedItem();
+            Order selectedPedido = (Order) comboPedidos.getSelectedItem();
             if (selectedPedido != null) {
                 try {
                     double subtotalBase = 0.0;
-                    List<DetallePedido> detalles = pedidoDAO.obtenerDetallesPorPedidoId(selectedPedido.getPedidoId());
-                    for (DetallePedido dp : detalles) {
-                        Producto producto = productoDAO.obtenerProductoPorId(dp.getProductoId());
+                    List<OrderItem> detalles = orderService.findItemsByOrderId(selectedPedido.getId());
+                    for (OrderItem dp : detalles) {
+                        Product producto = productService.findProductById(dp.getProductId());
                         if (producto != null) {
-                            subtotalBase += producto.getValorVenta() * dp.getCantidad();
+                            subtotalBase += producto.getSalePrice() * dp.getQuantity();
                         }
                     }
                     double impuesto = subtotalBase * PORCENTAJE_IMPUESTO;
                     calculateAndDisplayTotal(subtotalBase, impuesto);
-                } catch (SQLException ex) {
+                } catch (RuntimeException ex) {
                     JOptionPane.showMessageDialog(this, "Error al recalcular totales: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
                     ex.printStackTrace();
                 }
@@ -335,7 +323,7 @@ public class GenerarFacturaView extends JFrame {
     }
 
     private void generarFactura() {
-        Pedido selectedPedido = (Pedido) comboPedidos.getSelectedItem();
+        Order selectedPedido = (Order) comboPedidos.getSelectedItem();
         if (selectedPedido == null) {
             JOptionPane.showMessageDialog(this, "No hay ningún pedido seleccionado para facturar.", "Advertencia", JOptionPane.WARNING_MESSAGE);
             return;
@@ -344,11 +332,11 @@ public class GenerarFacturaView extends JFrame {
         try {
             // Calcular todos los valores finales
             double subtotalBase = 0.0;
-            List<DetallePedido> detalles = pedidoDAO.obtenerDetallesPorPedidoId(selectedPedido.getPedidoId());
-            for (DetallePedido dp : detalles) {
-                Producto producto = productoDAO.obtenerProductoPorId(dp.getProductoId());
+            List<OrderItem> detalles = orderService.findItemsByOrderId(selectedPedido.getId());
+            for (OrderItem dp : detalles) {
+                Product producto = productService.findProductById(dp.getProductId());
                 if (producto != null) {
-                    subtotalBase += producto.getValorVenta() * dp.getCantidad();
+                    subtotalBase += producto.getSalePrice() * dp.getQuantity();
                 }
             }
             double impuestoCalculado = subtotalBase * PORCENTAJE_IMPUESTO;
@@ -360,29 +348,30 @@ public class GenerarFacturaView extends JFrame {
             }
             double totalFinal = subtotalBase + impuestoCalculado + propinaIngresada;
 
-            // Crear objeto Factura con LocalDateTime.now()
-            Factura factura = new Factura();
-            factura.setPedidoId(selectedPedido.getPedidoId());
+            // Crear la factura como snapshot contable con la fecha actual
+            Invoice factura = new Invoice();
+            factura.setOrderId(selectedPedido.getId());
             factura.setSubtotal(subtotalBase);
-            factura.setImpuestoTotal(impuestoCalculado); // Usar el impuesto calculado
+            factura.setTotalTax(impuestoCalculado); // Usar el impuesto calculado
+            factura.setTip(propinaIngresada);
             factura.setTotal(totalFinal);
-            factura.setFechaFactura(LocalDateTime.now()); // Establecer la fecha actual
+            factura.setInvoicedAt(LocalDateTime.now()); // Establecer la fecha actual
 
-            // Insertar factura en la DB
-            facturaService.insertarFactura(factura); // Tu DAO no devuelve el ID, lo inserta.
+            // Persistir la factura
+            invoiceService.save(factura);
 
             // Actualizar estado del pedido a "pagado"
-            pedidoDAO.actualizarEstadoPedido(selectedPedido.getPedidoId(), "pagado");
+            orderService.updateStatus(selectedPedido.getId(), "pagado");
 
             JOptionPane.showMessageDialog(this,
-                    "Factura generada exitosamente para Pedido #" + selectedPedido.getPedidoId() +
+                    "Factura generada exitosamente para Pedido #" + selectedPedido.getId() +
                     "\nTotal a pagar: $" + df.format(totalFinal),
                     "Factura Generada", JOptionPane.INFORMATION_MESSAGE);
 
             // Recargar la lista de pedidos para que el pedido facturado ya no aparezca
             loadPedidosParaFacturar();
 
-        } catch (SQLException ex) {
+        } catch (RuntimeException ex) {
             JOptionPane.showMessageDialog(this, "Error al generar la factura: " + ex.getMessage(), "Error de DB", JOptionPane.ERROR_MESSAGE);
             ex.printStackTrace();
         }
