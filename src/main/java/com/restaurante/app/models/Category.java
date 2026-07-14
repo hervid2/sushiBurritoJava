@@ -1,6 +1,5 @@
 package com.restaurante.app.models;
 
-import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -10,19 +9,17 @@ import jakarta.persistence.Table;
 /**
  * A menu category (e.g. sushi, main dishes).
  *
- * <p>Mapped to the {@code categorias} table; the {@code @Column} overrides map the still-Spanish
- * columns and are dropped once Iteration 5 renames the schema.
+ * <p>Mapped to the {@code categories} table; column names map 1:1 to the fields, so no
+ * {@code @Column} overrides are needed after the Iteration 5 rename.
  */
 @Entity
-@Table(name = "categorias")
+@Table(name = "categories")
 public class Category {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "categoria_id")
     private Integer id;
 
-    @Column(name = "nombre")
     private String name;
 
     public Category() {

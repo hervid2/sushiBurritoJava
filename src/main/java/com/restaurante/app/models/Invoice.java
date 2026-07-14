@@ -1,6 +1,5 @@
 package com.restaurante.app.models;
 
-import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -12,35 +11,28 @@ import java.time.LocalDateTime;
 /**
  * The invoice generated for a paid {@link Order}.
  *
- * <p>Mapped to the {@code facturas} table. The monetary amounts are a legitimate accounting snapshot
- * frozen at billing time (kept as-is in Iteration 5). The {@code @Column} overrides map the
- * still-Spanish schema and are dropped when the schema is renamed.
+ * <p>Mapped to the {@code invoices} table. The monetary amounts are a legitimate accounting snapshot
+ * frozen at billing time (kept as-is). Column names map 1:1 to the fields (snake_case), so no
+ * {@code @Column} overrides are needed after the Iteration 5 rename.
  */
 @Entity
-@Table(name = "facturas")
+@Table(name = "invoices")
 public class Invoice {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "factura_id")
     private Integer id;
 
-    @Column(name = "pedido_id")
     private Integer orderId;
 
-    @Column(name = "subtotal")
     private double subtotal;
 
-    @Column(name = "impuesto_total")
     private double totalTax;
 
-    @Column(name = "propina")
     private double tip;
 
-    @Column(name = "total")
     private double total;
 
-    @Column(name = "fecha_factura")
     private LocalDateTime invoicedAt;
 
     public Invoice() {

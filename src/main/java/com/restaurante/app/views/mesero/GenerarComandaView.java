@@ -17,8 +17,6 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;
-import java.util.Set; // Para conjuntos, si es necesario para categorías
-import java.util.HashSet; // Para HashSet
 
 public class GenerarComandaView extends JFrame {
 
@@ -262,8 +260,6 @@ public class GenerarComandaView extends JFrame {
             if (confirm == JOptionPane.YES_OPTION) {
                 try {
                     List<OrderItemDTO> detalles = new ArrayList<>();
-                    StringBuilder productosResumen = new StringBuilder();
-                    Set<String> categoriasUnicas = new HashSet<>(); // Usamos un Set para asegurar categorías únicas
 
                     String mesaSeleccionada = (String) comboMesa.getSelectedItem();
                     int numeroMesa = Integer.parseInt(mesaSeleccionada);
@@ -272,24 +268,10 @@ public class GenerarComandaView extends JFrame {
                         int productoId = (int) tableModel.getValueAt(i, 4);
                         int cantidad = (int) tableModel.getValueAt(i, 2);
                         String notas = (String) tableModel.getValueAt(i, 3);
-                        String nombreProducto = (String) tableModel.getValueAt(i, 0); // Nombre del producto desde la tabla
-                        String nombreCategoria = (String) tableModel.getValueAt(i, 1); // Nombre de la categoría desde la tabla
 
                         OrderItemDTO detalle = new OrderItemDTO(productoId, cantidad, notas);
                         detalles.add(detalle);
-
-                        // Construir el resumen de productos
-                        if (productosResumen.length() > 0) {
-                            productosResumen.append(", ");
-                        }
-                        productosResumen.append(cantidad).append(" ").append(nombreProducto);
-
-                        // Añadir categoría al set para mantenerlas únicas
-                        categoriasUnicas.add(nombreCategoria);
                     }
-
-                    // Convertir el Set de categorías a una cadena separada por comas
-                    String categoriasResumenStr = String.join(", ", categoriasUnicas);
 
                     // Crear el objeto Order
                     Order nuevoPedido = new Order();
@@ -297,8 +279,8 @@ public class GenerarComandaView extends JFrame {
                     nuevoPedido.setTableNumber(numeroMesa);
                     nuevoPedido.setStatus("pendiente"); // Estado inicial
 
-                    // Delegar en el servicio con todos los argumentos necesarios
-                    orderService.createOrder(nuevoPedido, detalles, productosResumen.toString(), categoriasResumenStr);
+                    // El resumen de productos/categorías lo reconstruye la vista v_order_summary
+                    orderService.createOrder(nuevoPedido, detalles);
 
                     JOptionPane.showMessageDialog(this, "¡La comanda fue generada con éxito!", "Comanda Creada", JOptionPane.INFORMATION_MESSAGE);
                     tableModel.setRowCount(0); // Limpiar la tabla de resumen

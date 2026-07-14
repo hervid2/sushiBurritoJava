@@ -1,14 +1,12 @@
 package com.restaurante.app.service;
 
-import com.restaurante.app.models.Category;
 import com.restaurante.app.models.Order;
 import com.restaurante.app.models.OrderItem;
 import com.restaurante.app.models.OrderItemDTO;
-import com.restaurante.app.models.Product;
-import com.restaurante.app.repository.CategoryRepository;
+import com.restaurante.app.models.OrderSummary;
 import com.restaurante.app.repository.OrderItemRepository;
 import com.restaurante.app.repository.OrderRepository;
-import com.restaurante.app.repository.ProductRepository;
+import com.restaurante.app.repository.OrderSummaryRepository;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,10 +14,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * Business rules for orders: creation, editing, status changes and the kitchen queue.
@@ -31,77 +27,65 @@ public class OrderService {
 
     private final OrderRepository orderRepository;
     private final OrderItemRepository orderItemRepository;
-    private final ProductRepository productRepository;
-    private final CategoryRepository categoryRepository;
+    private final OrderSummaryRepository orderSummaryRepository;
 
     public OrderService(OrderRepository orderRepository, OrderItemRepository orderItemRepository,
-                        ProductRepository productRepository, CategoryRepository categoryRepository) {
+                        OrderSummaryRepository orderSummaryRepository) {
         this.orderRepository = orderRepository;
         this.orderItemRepository = orderItemRepository;
-        this.productRepository = productRepository;
-        this.categoryRepository = categoryRepository;
+        this.orderSummaryRepository = orderSummaryRepository;
     }
 
     /**
      * Creates a new order together with its line items, marking it as pending so it reaches the
-     * kitchen queue.
+     * kitchen queue. The product/category summaries are no longer stored on the order; they are
+     * derived from the line items by the {@code v_order_summary} view.
      *
-     * @param order           the order header (user, table)
-     * @param items           the line items entered in the view
-     * @param productSummary  denormalised product summary stored on the order
-     * @param categorySummary denormalised category summary stored on the order
+     * @param order the order header (user, table)
+     * @param items the line items entered in the view
      */
     @Transactional
-    public void createOrder(Order order, List<OrderItemDTO> items,
-                            String productSummary, String categorySummary) {
+    public void createOrder(Order order, List<OrderItemDTO> items) {
         LocalDateTime now = LocalDateTime.now();
         order.setStatus("pendiente");
         order.setCreatedAt(now);
         order.setUpdatedAt(now);
-        order.setEntryTime(now);
-        order.setProductSummary(productSummary);
-        order.setCategorySummary(categorySummary);
 
         Order saved = orderRepository.save(order);
         orderItemRepository.saveAll(toOrderItems(saved.getId(), items));
     }
 
     /**
-     * Updates an existing order and its line items, rebuilding the product/category summaries from the
-     * supplied lines. Only the editable fields are touched, preserving the original creation metadata.
+     * Updates an existing order and its line items. Only the editable fields are touched, preserving
+     * the original creation metadata; the product/category summaries follow automatically from the
+     * replaced line items through the {@code v_order_summary} view.
      *
      * @param order the order header carrying its id and edited values (table, status)
      * @param items the new line items that replace the previous ones
      */
     @Transactional
     public void updateOrder(Order order, List<OrderItemDTO> items) {
-        StringBuilder productSummary = new StringBuilder();
-        Set<String> uniqueCategories = new LinkedHashSet<>();
-        for (OrderItemDTO item : items) {
-            Product product = productRepository.findById(item.getProductId()).orElse(null);
-            if (product != null) {
-                if (productSummary.length() > 0) {
-                    productSummary.append(", ");
-                }
-                productSummary.append(item.getQuantity()).append(" ").append(product.getName());
-
-                if (product.getCategoryId() != null) {
-                    categoryRepository.findById(product.getCategoryId())
-                            .ifPresent(category -> uniqueCategories.add(category.getName()));
-                }
-            }
-        }
-
         Order existing = orderRepository.findById(order.getId()).orElseThrow();
         existing.setTableNumber(order.getTableNumber());
         existing.setStatus(order.getStatus());
         existing.setUpdatedAt(LocalDateTime.now());
-        existing.setProductSummary(productSummary.toString());
-        existing.setCategorySummary(String.join(", ", uniqueCategories));
         orderRepository.save(existing);
 
         orderItemRepository.deleteByOrderId(existing.getId());
         orderItemRepository.saveAll(toOrderItems(existing.getId(), items));
+    }
+
+    /**
+     * Returns the human-readable product summary of an order (e.g. {@code "2 California Roll, 1 Té
+     * Verde"}), rebuilt from its line items by the {@code v_order_summary} view.
+     *
+     * @param orderId the order id
+     * @return the product summary, or an empty string if the order has no line items yet
+     */
+    public String getProductSummary(int orderId) {
+        return orderSummaryRepository.findById(orderId)
+                .map(OrderSummary::getProductSummary)
+                .orElse("");
     }
 
     /**
@@ -163,17 +147,14 @@ public class OrderService {
 
         List<Map<String, Object>> formatted = new ArrayList<>();
         for (Order order : relevant) {
+            OrderSummary summary = orderSummaryRepository.findById(order.getId()).orElse(null);
+
             Map<String, Object> row = new HashMap<>();
             row.put("id", order.getId());
             row.put("mesa", order.getTableNumber());
-            row.put("productos", order.getProductSummary());
-            row.put("categorias", order.getCategorySummary());
-
-            LocalDateTime kitchenTime = order.getEntryTime();
-            if (kitchenTime == null) {
-                kitchenTime = order.getCreatedAt();
-            }
-            row.put("hora", kitchenTime);
+            row.put("productos", summary != null ? summary.getProductSummary() : "");
+            row.put("categorias", summary != null ? summary.getCategorySummary() : "");
+            row.put("hora", order.getCreatedAt());
             row.put("estado", order.getStatus());
 
             formatted.add(row);

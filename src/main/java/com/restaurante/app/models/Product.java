@@ -1,6 +1,5 @@
 package com.restaurante.app.models;
 
-import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -10,35 +9,28 @@ import jakarta.persistence.Table;
 /**
  * A product on the menu.
  *
- * <p>Mapped to the {@code productos} table. The owning category is kept as a plain foreign-key column
+ * <p>Mapped to the {@code products} table. The owning category is kept as a plain foreign-key column
  * ({@link #categoryId}) rather than an association, matching how the views pass category ids around.
- * The {@code @Column} overrides map the still-Spanish schema and are dropped in Iteration 5.
+ * Column names map 1:1 to the fields (snake_case), so no {@code @Column} overrides are needed.
  */
 @Entity
-@Table(name = "productos")
+@Table(name = "products")
 public class Product {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "producto_id")
     private Integer id;
 
-    @Column(name = "nombre")
     private String name;
 
-    @Column(name = "ingredientes")
     private String ingredients;
 
-    @Column(name = "valor_neto")
     private double netPrice;
 
-    @Column(name = "valor_venta")
     private double salePrice;
 
-    @Column(name = "impuesto")
     private double tax;
 
-    @Column(name = "categoria_id")
     private Integer categoryId;
 
     public Product() {

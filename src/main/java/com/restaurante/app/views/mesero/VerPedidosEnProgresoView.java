@@ -49,8 +49,6 @@ public class VerPedidosEnProgresoView extends JFrame {
             pedidosActivos.addAll(orderService.findOrdersByStatus("entregado"));
 
             for (Order pedido : pedidosActivos) {
-                // El resumen de productos ya está cargado en el objeto Order
-                String productosResumen = pedido.getProductSummary();
                 double totalEstimado = calcularTotalEstimado(pedido.getId());
 
                 String horaCreacion = (pedido.getCreatedAt() != null) ?

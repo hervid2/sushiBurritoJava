@@ -1,6 +1,5 @@
 package com.restaurante.app.models;
 
-import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -10,29 +9,23 @@ import jakarta.persistence.Table;
 /**
  * A user account of the application (administrator, waiter or cook).
  *
- * <p>Mapped to the {@code usuarios} table. The Spanish column names are still in place; they are
- * renamed to English by the Flyway baseline in Iteration 5, at which point the {@code @Column}
- * overrides can be dropped.
+ * <p>Mapped to the {@code users} table. Column names map 1:1 to the fields through Spring Boot's
+ * snake_case naming strategy, so no {@code @Column} overrides are needed after the Iteration 5 rename.
  */
 @Entity
-@Table(name = "usuarios")
+@Table(name = "users")
 public class User {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "usuario_id")
     private Integer id;
 
-    @Column(name = "nombre")
     private String name;
 
-    @Column(name = "rol")
     private String role;
 
-    @Column(name = "correo")
     private String email;
 
-    @Column(name = "contrasena")
     private String password;
 
     public User() {

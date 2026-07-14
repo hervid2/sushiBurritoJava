@@ -40,11 +40,11 @@ public class CancelarPedidoView extends JFrame {
 
             // Combinar y mostrar en la tabla
             for (Order p : pedidosPendientes) {
-                String productosResumen = p.getProductSummary();
+                String productosResumen = orderService.getProductSummary(p.getId());
                 pedidosModel.addRow(new Object[]{p.getId(), p.getTableNumber(), productosResumen, p.getStatus()});
             }
             for (Order p : pedidosPreparando) {
-                String productosResumen = p.getProductSummary();
+                String productosResumen = orderService.getProductSummary(p.getId());
                 pedidosModel.addRow(new Object[]{p.getId(), p.getTableNumber(), productosResumen, p.getStatus()});
             }
 

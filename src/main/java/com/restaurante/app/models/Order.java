@@ -1,6 +1,5 @@
 package com.restaurante.app.models;
 
-import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -12,43 +11,30 @@ import java.time.LocalDateTime;
 /**
  * A customer order taken by a waiter.
  *
- * <p>Mapped to the {@code pedidos} table. The waiter is kept as a plain foreign-key column
- * ({@link #userId}); the line items live in {@link OrderItem}. The {@link #productSummary} and
- * {@link #categorySummary} columns are the denormalised text summaries flagged for removal in
- * Iteration 5. The {@code @Column} overrides map the still-Spanish schema and are dropped there too.
+ * <p>Mapped to the {@code orders} table. The waiter is kept as a plain foreign-key column
+ * ({@link #userId}); the line items live in {@link OrderItem}. The denormalised product/category
+ * text summaries were removed in Iteration 5 and are now reconstructed from the line items by the
+ * {@code v_order_summary} database view (see {@link OrderSummary}). Column names map 1:1 to the
+ * fields (snake_case), so no {@code @Column} overrides are needed.
  */
 @Entity
-@Table(name = "pedidos")
+@Table(name = "orders")
 public class Order {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "pedido_id")
     private Integer id;
 
-    @Column(name = "usuario_id")
     private Integer userId;
 
-    @Column(name = "mesa")
     private Integer tableNumber;
 
-    @Column(name = "estado")
     private String status;
 
-    @Column(name = "fecha_creacion")
+    /** When the order was taken; also serves as the kitchen entry time (former {@code hora_entrada}). */
     private LocalDateTime createdAt;
 
-    @Column(name = "fecha_modificacion")
     private LocalDateTime updatedAt;
-
-    @Column(name = "producto")
-    private String productSummary;
-
-    @Column(name = "producto_categoria")
-    private String categorySummary;
-
-    @Column(name = "hora_entrada")
-    private LocalDateTime entryTime;
 
     public Order() {
     }
@@ -99,30 +85,6 @@ public class Order {
 
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
-    }
-
-    public String getProductSummary() {
-        return productSummary;
-    }
-
-    public void setProductSummary(String productSummary) {
-        this.productSummary = productSummary;
-    }
-
-    public String getCategorySummary() {
-        return categorySummary;
-    }
-
-    public void setCategorySummary(String categorySummary) {
-        this.categorySummary = categorySummary;
-    }
-
-    public LocalDateTime getEntryTime() {
-        return entryTime;
-    }
-
-    public void setEntryTime(LocalDateTime entryTime) {
-        this.entryTime = entryTime;
     }
 
     /**
