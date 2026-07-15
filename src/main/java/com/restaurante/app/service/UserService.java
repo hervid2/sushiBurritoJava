@@ -6,15 +6,14 @@ import com.restaurante.app.exception.UserNotFoundException;
 import com.restaurante.app.exception.ValidationException;
 import com.restaurante.app.models.User;
 import com.restaurante.app.repository.UserRepository;
+import com.restaurante.app.validation.CredentialValidator;
 
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.regex.Pattern;
 
 /**
  * Business rules for user accounts: authentication, registration, password reset and maintenance.
@@ -22,25 +21,35 @@ import java.util.regex.Pattern;
  * <p>This service is deliberately free of any Swing dependency: it returns values or throws
  * {@link com.restaurante.app.exception.DomainException domain exceptions}, and lets the views decide
  * how to present the outcome. Persistence goes through {@link UserRepository}.
+ *
+ * <p>Passwords are never stored or compared in plain text: hashing is delegated to the injected
+ * {@link PasswordEncoder} (see {@link com.restaurante.app.security.PasswordEncoderConfig}).
  */
 @Service
 public class UserService {
 
-    private static final Pattern EMAIL_PATTERN =
-            Pattern.compile("^[\\w-\\.\\+]+@([\\w-]+\\.)+[\\w-]{2,4}$");
-    private static final Pattern NAME_PATTERN = Pattern.compile("^[\\p{L} ]{6,40}$");
-
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final CredentialValidator credentialValidator;
 
     /**
-     * @param userRepository user repository injected by Spring
+     * @param userRepository      user repository injected by Spring
+     * @param passwordEncoder     hashing strategy used to store and verify passwords
+     * @param credentialValidator shared credential format rules
      */
-    public UserService(UserRepository userRepository) {
+    public UserService(UserRepository userRepository,
+                       PasswordEncoder passwordEncoder,
+                       CredentialValidator credentialValidator) {
         this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.credentialValidator = credentialValidator;
     }
 
     /**
      * Authenticates a user against the stored credentials.
+     *
+     * <p>Accounts still holding a hash from the old SHA-256 scheme are transparently re-hashed with
+     * BCrypt on their next successful login, so no password reset is imposed on existing users.
      *
      * @param email    the account email
      * @param password the plain-text password to verify
@@ -49,6 +58,7 @@ public class UserService {
      * @throws UserNotFoundException       if no account exists for the email
      * @throws InvalidCredentialsException if the password does not match
      */
+    @Transactional
     public User authenticate(String email, String password)
             throws ValidationException, UserNotFoundException, InvalidCredentialsException {
         if (email == null || email.isEmpty() || password == null || password.isEmpty()) {
@@ -56,8 +66,12 @@ public class UserService {
         }
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new UserNotFoundException("Correo no registrado."));
-        if (!user.getPassword().equals(hashPassword(password))) {
+        if (!passwordEncoder.matches(password, user.getPassword())) {
             throw new InvalidCredentialsException("Contraseña incorrecta.");
+        }
+        if (passwordEncoder.upgradeEncoding(user.getPassword())) {
+            user.setPassword(passwordEncoder.encode(password));
+            userRepository.save(user);
         }
         return user;
     }
@@ -71,22 +85,23 @@ public class UserService {
     }
 
     /**
-     * Resets a user's password.
+     * Resets a user's password, applying the same strength policy as registration.
      *
      * @param email       the account email
      * @param newPassword the new plain-text password
-     * @throws ValidationException   if the new password is blank
+     * @throws ValidationException   if the new password does not meet the strength policy
      * @throws UserNotFoundException if no account exists for the email
      */
     @Transactional
     public void resetPassword(String email, String newPassword)
             throws ValidationException, UserNotFoundException {
-        if (newPassword == null || newPassword.isEmpty()) {
-            throw new ValidationException(List.of("La nueva contraseña no puede estar vacía."));
+        List<String> errors = credentialValidator.validatePassword(newPassword);
+        if (!errors.isEmpty()) {
+            throw new ValidationException(errors);
         }
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new UserNotFoundException("Usuario no encontrado."));
-        user.setPassword(hashPassword(newPassword));
+        user.setPassword(passwordEncoder.encode(newPassword));
         userRepository.save(user);
     }
 
@@ -110,42 +125,43 @@ public class UserService {
         user.setName(name);
         user.setEmail(email);
         user.setRole(role.toLowerCase());
-        user.setPassword(hashPassword(password));
+        user.setPassword(passwordEncoder.encode(password));
         userRepository.save(user);
     }
 
     /**
      * Validates the data required to create a user without persisting anything.
      *
+     * <p>Format rules come from {@link CredentialValidator}; this method adds the checks that need
+     * the database (name and email uniqueness), which are only worth running once the value itself
+     * is well-formed.
+     *
+     * @param name     the display name
+     * @param email    the email
+     * @param role     the role (administrador / cocinero / mesero)
+     * @param password the plain-text password
      * @return the list of validation errors, empty when the data is valid
      */
     public List<String> validateCredentials(String name, String email, String role, String password) {
         List<String> errors = new ArrayList<>();
 
-        if (name == null || !NAME_PATTERN.matcher(name).matches()) {
-            errors.add("El nombre debe tener entre 6 y 40 letras y puede incluir espacios.");
-        } else if (userRepository.findByNameIgnoreCase(name).isPresent()) {
+        List<String> nameErrors = credentialValidator.validateName(name);
+        errors.addAll(nameErrors);
+        if (nameErrors.isEmpty() && userRepository.findByNameIgnoreCase(name).isPresent()) {
             errors.add("El nombre de usuario ya está en uso.");
         }
 
-        if (email == null || !EMAIL_PATTERN.matcher(email).matches()) {
-            errors.add("El correo electrónico no tiene un formato válido.");
-        } else if (userRepository.findByEmail(email).isPresent()) {
+        List<String> emailErrors = credentialValidator.validateEmail(email);
+        errors.addAll(emailErrors);
+        if (emailErrors.isEmpty() && userRepository.findByEmail(email).isPresent()) {
             errors.add("Ya existe una cuenta con ese correo.");
         }
 
-        if (role == null || !(role.equalsIgnoreCase("administrador")
-                || role.equalsIgnoreCase("cocinero") || role.equalsIgnoreCase("mesero"))) {
-            errors.add("El rol debe ser 'administrador', 'cocinero' o 'mesero'.");
-        }
+        errors.addAll(credentialValidator.validateRole(role));
 
-        if (password == null || password.length() < 8
-                || !password.matches(".*[A-Z].*")
-                || !password.matches(".*[a-z].*")
-                || !password.matches(".*[0-9].*")
-                || !password.matches(".*[!@#$%^&*(),.?\":{}|<>].*")) {
-            errors.add("La contraseña debe tener al menos 8 caracteres, incluir mayúsculas, minúsculas, números y un carácter especial.");
-        } else if (password.equals(name)) {
+        List<String> passwordErrors = credentialValidator.validatePassword(password);
+        errors.addAll(passwordErrors);
+        if (passwordErrors.isEmpty() && password.equals(name)) {
             errors.add("La contraseña no puede ser igual al nombre de usuario.");
         }
 
@@ -201,22 +217,5 @@ public class UserService {
 
         existing.setEmail(newEmail);
         userRepository.save(existing);
-    }
-
-    /**
-     * Hashes a password with SHA-256. Replaced by BCrypt in a later iteration.
-     */
-    private String hashPassword(String password) {
-        try {
-            MessageDigest md = MessageDigest.getInstance("SHA-256");
-            byte[] bytes = md.digest(password.getBytes());
-            StringBuilder sb = new StringBuilder();
-            for (byte b : bytes) {
-                sb.append(String.format("%02x", b));
-            }
-            return sb.toString();
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException("Error al hashear la contraseña", e);
-        }
     }
 }

@@ -65,6 +65,13 @@
             <version>${mysql.version}</version>
         </dependency>
 
+        <!-- Password hashing (BCrypt) only: the standalone crypto module avoids pulling the whole
+             Spring Security stack, which a desktop app with no web layer does not need. -->
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-crypto</artifactId>
+        </dependency>
+
         <!-- Invoice PDF generation. -->
         <dependency>
             <groupId>org.apache.pdfbox</groupId>

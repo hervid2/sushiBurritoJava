@@ -1,0 +1,17 @@
+# Template for local credentials. Copy it next to this file as "application-local.properties"
+# (gitignored) and fill in the real values, or export the same keys as environment variables:
+#
+#   cp application-local.properties.example application-local.properties
+#
+# The application reads it through "spring.config.import=optional:file:./application-local.properties",
+# so it is picked up automatically when present and ignored when absent.
+#
+# NEVER commit the filled-in file, and rotate any password that has been exposed.
+
+# Local MySQL:
+#   jdbc:mysql://localhost:3306/sushiburrito_db
+# Railway (also set SPRING_PROFILES_ACTIVE=railway):
+#   jdbc:mysql://<host>.proxy.rlwy.net:<port>/sushiburrito_db
+DB_URL=jdbc:mysql://localhost:3306/sushiburrito_db
+DB_USERNAME=
+DB_PASSWORD=
