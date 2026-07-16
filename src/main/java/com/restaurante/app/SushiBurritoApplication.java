@@ -7,6 +7,7 @@ import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Profile;
 
 import javax.swing.SwingUtilities;
 
@@ -37,9 +38,13 @@ public class SushiBurritoApplication {
      * Launches the Swing UI once the context has fully started. Running on the Event Dispatch Thread
      * keeps every Swing interaction on the correct thread.
      *
+     * <p>Disabled under the {@code test} profile so the smoke tests can load the context headlessly
+     * without opening a window.
+     *
      * @return a runner that displays the login window
      */
     @Bean
+    @Profile("!test")
     CommandLineRunner startUi() {
         return args -> SwingUtilities.invokeLater(() -> new LoginView().setVisible(true));
     }
