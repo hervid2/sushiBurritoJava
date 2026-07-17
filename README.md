@@ -123,11 +123,11 @@ queue, and one already-paid order with its invoice so the statistics screen has 
 ## Usage / functionality
 
 Log in from the **Login** window; the destination panel depends on the account's role.
-![alt text](image.png)
+![alt text](/ReadmeFiles/image.png)
 
 ### Administrator
 
-![alt text](image-1.png)
+![alt text](/ReadmeFiles/image-1.png)
 
 - **Users management** — register, edit email, and delete users; passwords must meet the strength
   policy (min 8 chars, upper/lower/digit/special).
@@ -137,7 +137,7 @@ Log in from the **Login** window; the destination panel depends on the account's
 
 ### Waiter (mesero)
 
-![alt text](image-2.png)
+![alt text](/ReadmeFiles/image-2.png)
 
 - **Create order** (*generar comanda*) — pick a table and add products with quantities/notes; the
   order enters as `pendiente` and appears in the kitchen queue.
@@ -149,7 +149,7 @@ Log in from the **Login** window; the destination panel depends on the account's
 
 ### Cook (cocinero)
 
-![alt text](image-3.png)
+![alt text](/ReadmeFiles/image-3.png)
 
 - **Kitchen panel** — sees pending and in-preparation orders (product/category summaries rebuilt from
   the line items) and advances their status.
